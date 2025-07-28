@@ -481,7 +481,13 @@ return (
       <PersistGate loading={<Loading type="page" />} persistor={persistor}>
         <WebSocketProvider>
         <BrowserRouter>
-          <div className="min-h-screen bg-background">
+<div className="min-h-screen bg-background">
+              {/* Mobile viewport optimization */}
+              <div className="hidden">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+                <meta name="format-detection" content="telephone=no" />
+                <meta name="msapplication-tap-highlight" content="no" />
+              </div>
             {/* Minimal SDK Status Indicator (only in development) */}
             {import.meta.env.DEV && sdkError && (
               <div className="fixed top-0 right-0 z-50 p-2 text-xs">

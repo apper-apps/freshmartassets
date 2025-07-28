@@ -596,7 +596,7 @@ const handleVerificationAction = async (orderId, action, notes = '') => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div className="card p-6 bg-gradient-to-r from-green-500 to-emerald-500 text-white">
 <div className="flex items-center justify-between">
             <div>
@@ -649,7 +649,7 @@ const handleVerificationAction = async (orderId, action, notes = '') => {
       {/* Navigation Tabs */}
       <div className="card mb-8">
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
+<nav className="flex flex-wrap gap-2 sm:space-x-8 px-4 sm:px-6 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}

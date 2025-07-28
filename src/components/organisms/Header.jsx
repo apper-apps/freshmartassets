@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import ApperIcon from '@/components/ApperIcon';
-import SearchBar from '@/components/molecules/SearchBar';
-import { selectCartItemCount } from '@/store/cartSlice';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import ApperIcon from "@/components/ApperIcon";
+import SearchBar from "@/components/molecules/SearchBar";
+import { selectCartItemCount } from "@/store/cartSlice";
 
 const Header = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
   const navigate = useNavigate();
@@ -44,9 +44,9 @@ const Header = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
             </Link>
           </nav>
 
-          {/* Search Bar - Desktop */}
-          <div className="hidden md:block flex-1 max-w-md mx-8">
-            <SearchBar onSearch={handleSearch} />
+{/* Search Bar - Desktop */}
+          <div className="hidden md:block flex-1 max-w-md mx-4 lg:mx-8">
+            <SearchBar onSearch={handleSearch} className="w-full" />
           </div>
 
           {/* Right Side Actions */}
@@ -81,17 +81,16 @@ const Header = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
             </button>
           </div>
         </div>
-
-        {/* Mobile Search Bar */}
-        <div className="md:hidden pb-4">
-          <SearchBar onSearch={handleSearch} />
-        </div>
+{/* Mobile Search Bar */}
+        <div className="md:hidden pb-3 px-1">
+          <SearchBar onSearch={handleSearch} className="w-full" />
+</div>
       </div>
 
       {/* Mobile Navigation */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
-          <nav className="px-4 py-2 space-y-2">
+        <div className="md:hidden bg-white border-t border-gray-200 shadow-lg safe-area-inset-bottom">
+          <nav className="px-4 py-3 space-y-1">
             <Link 
               to="/" 
               className="block px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors"

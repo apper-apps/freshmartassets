@@ -39,7 +39,7 @@ const Account = () => {
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-8">
-        <nav className="flex space-x-8">
+<nav className="flex flex-wrap gap-2 sm:space-x-8 overflow-x-auto pb-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}

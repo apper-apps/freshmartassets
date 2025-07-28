@@ -341,7 +341,7 @@ function FinancialDashboard() {
 
       {/* Financial Metrics Overview */}
       {financialMetrics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white p-6 rounded-lg shadow-card">
             <div className="flex items-center justify-between">
               <div>
@@ -402,7 +402,7 @@ function FinancialDashboard() {
 
       {/* Tab Navigation */}
       <div className="mb-6">
-        <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+<nav className="flex flex-wrap gap-1 sm:space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview', icon: 'BarChart3' },
             { id: 'expenses', label: 'Expenses', icon: 'CreditCard' },
@@ -473,7 +473,7 @@ function FinancialDashboard() {
               </div>
             </div>
             
-            <div className="overflow-x-auto">
+<div className="overflow-x-auto -mx-4 sm:mx-0">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -542,7 +542,7 @@ function FinancialDashboard() {
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full">
+<table className="w-full min-w-[600px] sm:min-w-full">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="text-left p-4 font-medium text-gray-600">Name</th>
@@ -617,7 +617,7 @@ function FinancialDashboard() {
               </div>
             </div>
             
-            <div className="overflow-x-auto">
+<div className="overflow-x-auto -mx-4 sm:mx-0">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>

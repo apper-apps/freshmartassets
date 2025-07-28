@@ -696,11 +696,12 @@ return (
           <div className="lg:col-span-2">
           <div className="card p-6">
             <div className="mb-6">
-              <div className="flex space-x-2 mb-4">
+<div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 mb-4">
                 <div className="flex-1">
                   <SearchBar
                     onSearch={setSearchTerm}
                     placeholder="Search products or scan barcode..."
+                    className="w-full"
                   />
                 </div>
                 <Button
