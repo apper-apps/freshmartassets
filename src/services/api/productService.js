@@ -916,14 +916,16 @@ width = targetHeight * aspectRatio;
         thumbnail: "https://via.placeholder.com/200x200/4CAF50/ffffff?text=Fresh",
         description: `Fresh ${query}`,
         source: 'internal',
-        category: category !== 'all' ? category : 'Fresh Vegetables'
+        category: category !== 'all' ? category : 'Fresh Vegetables',
+        isWorking: true
       },
-{
-        url: "https://via.placeholder.com/600x600/2E7D32/ffffff?text=Organic+Product",
+      {
+        url: "https://via.placeholder.com/600x600/2E7D32/ffffff?text=Organic+Product", 
         thumbnail: "https://via.placeholder.com/200x200/2E7D32/ffffff?text=Organic",
         description: `Organic ${query}`,
         source: 'internal',
-        category: category !== 'all' ? category : 'Organic Produce'
+        category: category !== 'all' ? category : 'Organic Produce',
+        isWorking: true
       }
     ];
     
@@ -974,23 +976,28 @@ width = targetHeight * aspectRatio;
       'Priscilla Du Preez', 'Markus Spiske', 'Freddy G', 'Taylor Kiser'
     ];
     
-const mockUnsplashImages = Array.from({ length: loadMore ? 12 : 6 }, (_, index) => ({
-      url: `https://via.placeholder.com/600x600/FF6F00/ffffff?text=${encodeURIComponent(randomTerm.substring(0, 15))}`,
-      thumbnail: `https://via.placeholder.com/200x200/FF6F00/ffffff?text=${encodeURIComponent(randomTerm.substring(0, 8))}`,
-      description: `${category !== 'all' ? category : 'Premium'} ${randomTerm}`,
-      source: 'unsplash',
-      category: category !== 'all' ? category : 'Food',
-      orientation: orientation,
-      attribution: {
-        photographer: photographers[index % photographers.length],
-        profileUrl: `https://unsplash.com/@${photographers[index % photographers.length].toLowerCase().replace(/\s+/g, '')}`,
-        downloadUrl: 'https://unsplash.com',
-        license: 'Unsplash License'
-      },
-      tags: this.generateImageTags(randomTerm, category),
-      quality: 'high',
-      isCommercialUse: true
-    }));
+const mockUnsplashImages = Array.from({ length: loadMore ? 12 : 6 }, (_, index) => {
+      // Generate working placeholder URLs without problematic parameters
+      const colorHex = ['FF6F00', 'FF8F00', '2E7D32', '4CAF50', '2196F3', 'FF5722'][index % 6];
+      return {
+        url: `https://via.placeholder.com/600x600/${colorHex}/ffffff?text=${encodeURIComponent(randomTerm.substring(0, 15))}`,
+        thumbnail: `https://via.placeholder.com/200x200/${colorHex}/ffffff?text=${encodeURIComponent(randomTerm.substring(0, 8))}`,
+        description: `${category !== 'all' ? category : 'Premium'} ${randomTerm}`,
+        source: 'unsplash',
+        category: category !== 'all' ? category : 'Food',
+        orientation: orientation,
+        attribution: {
+          photographer: photographers[index % photographers.length],
+          profileUrl: `https://unsplash.com/@${photographers[index % photographers.length].toLowerCase().replace(/\s+/g, '')}`,
+          downloadUrl: 'https://unsplash.com',
+          license: 'Unsplash License'
+        },
+        tags: this.generateImageTags(randomTerm, category),
+        quality: 'high',
+        isCommercialUse: true,
+        isWorking: true
+      };
+    });
     
     return mockUnsplashImages;
   }

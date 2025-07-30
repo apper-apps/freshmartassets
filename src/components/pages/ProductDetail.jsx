@@ -4,15 +4,15 @@ import { useDispatch } from "react-redux";
 import { Heart, Minus, Plus, ShoppingCart, Star } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { toast } from "react-hot-toast";
-import { addToCart } from "@/store/cartSlice";
-import { formatCurrency } from "@/utils/currency";
 import { productService } from "@/services/api/productService";
 import ApperIcon from "@/components/ApperIcon";
-import Cart from "@/components/pages/Cart";
-import { Badge } from "@/components/atoms/Badge";
-import { Button } from "@/components/atoms/Button";
-import Error from "@/components/ui/Error";
 import Loading from "@/components/ui/Loading";
+import Error from "@/components/ui/Error";
+import Cart from "@/components/pages/Cart";
+import Badge from "@/components/atoms/Badge";
+import Button from "@/components/atoms/Button";
+import { addToCart } from "@/store/cartSlice";
+import formatCurrency from "@/utils/currency";
 const ProductDetail = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -1175,10 +1175,22 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
   const maxRetries = 3;
   const retryDelays = [1000, 2000, 4000]; // Exponential backoff
 
-  const validateImageUrl = (url) => {
+const validateImageUrl = (url) => {
     try {
+      if (!url || typeof url !== 'string') return false;
+      
       const parsedUrl = new URL(url);
-      return parsedUrl.protocol === 'https:' && parsedUrl.hostname.includes('unsplash');
+      const validHosts = [
+        'unsplash.com',
+        'images.unsplash.com',
+        'via.placeholder.com',
+        'picsum.photos',
+        'source.unsplash.com'
+      ];
+      
+      return validHosts.some(host => parsedUrl.hostname.includes(host)) ||
+             parsedUrl.protocol === 'data:' ||
+             parsedUrl.hostname === 'localhost';
     } catch {
       return false;
     }
@@ -1187,17 +1199,39 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
   const constructImageUrl = (baseUrl, width, height, quality = 80) => {
     try {
       if (!baseUrl || !validateImageUrl(baseUrl)) {
-        throw new Error('Invalid base URL');
+        console.warn('Invalid base URL provided:', baseUrl);
+        return null;
       }
 
-      // Clean and validate URL construction
+      // Clean and validate URL construction with enhanced Unsplash support
       const url = new URL(baseUrl);
-      url.searchParams.set('w', width.toString());
-      url.searchParams.set('h', height.toString());
-      url.searchParams.set('fit', 'crop');
-      url.searchParams.set('auto', 'format');
-      url.searchParams.set('q', quality.toString());
-      url.searchParams.set('fm', 'webp');
+      
+      // Handle Unsplash URLs specifically
+      if (url.hostname.includes('unsplash.com')) {
+        // Remove problematic parameters that cause loading failures
+        url.searchParams.delete('dpr');
+        url.searchParams.delete('compress');
+        
+        // Set optimized parameters for Unsplash
+        url.searchParams.set('w', Math.min(width, 1200).toString());
+        url.searchParams.set('h', Math.min(height, 1200).toString());
+        url.searchParams.set('fit', 'crop');
+        url.searchParams.set('auto', 'format');
+        url.searchParams.set('q', Math.min(quality, 90).toString());
+        
+        // Use jpg for better compatibility instead of webp
+        if (quality < 70) {
+          url.searchParams.set('fm', 'jpg');
+        }
+      } else {
+        // Standard URL construction for other services
+        url.searchParams.set('w', width.toString());
+        url.searchParams.set('h', height.toString());
+        url.searchParams.set('fit', 'crop');
+        url.searchParams.set('auto', 'format');
+        url.searchParams.set('q', quality.toString());
+        url.searchParams.set('fm', 'webp');
+      }
       
       return url.toString();
     } catch (error) {
@@ -1211,30 +1245,50 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
     return `https://via.placeholder.com/${width}x${height}/f3f4f6/64748b?text=${encodedName}`;
   };
 
-  const handleImageError = useCallback(async (error, retryCount = 0) => {
-    console.warn(`Image loading failed (attempt ${retryCount + 1}):`, error);
+const handleImageError = useCallback(async (error, retryCount = 0) => {
+    console.warn(`Image loading failed (attempt ${retryCount + 1}):`, error?.message || 'Unknown error');
 
     if (retryCount < maxRetries) {
-      // Implement exponential backoff retry
+      // Implement exponential backoff retry with enhanced error handling
       const delay = retryDelays[retryCount] || 4000;
       
       setTimeout(() => {
-        const retryUrl = constructImageUrl(
+        // Try different quality levels and formats for retries
+        const qualityLevels = [60, 40, 20];
+        const currentQuality = qualityLevels[retryCount] || 20;
+        
+        let retryUrl = constructImageUrl(
           product.imageUrl, 
           dimensions.width, 
           dimensions.height,
-          60 // Lower quality for retry
+          currentQuality
         );
 
+        // If constructImageUrl fails, try a simplified approach
+        if (!retryUrl && product.imageUrl) {
+          try {
+            const baseUrl = new URL(product.imageUrl);
+            // Remove all parameters and try basic URL
+            baseUrl.search = '';
+            retryUrl = baseUrl.toString();
+          } catch (urlError) {
+            console.error('Failed to create retry URL:', urlError);
+            retryUrl = null;
+          }
+        }
+
         if (retryUrl) {
+          console.log(`Retrying image load with URL: ${retryUrl}`);
           setImageState(prev => ({
             ...prev,
             src: retryUrl,
             retryCount: retryCount + 1,
-            error: false
+            error: false,
+            loading: true
           }));
         } else {
           // Use fallback if URL construction fails
+          console.log('Using fallback image due to URL construction failure');
           setImageState(prev => ({
             ...prev,
             src: generateFallbackUrl(product.name, dimensions.width, dimensions.height),
@@ -1246,6 +1300,7 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
       }, delay);
     } else {
       // Max retries reached, use fallback
+      console.log('Max retries reached, using fallback image');
       setImageState(prev => ({
         ...prev,
         src: generateFallbackUrl(product.name, dimensions.width, dimensions.height),
@@ -1256,6 +1311,7 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
   }, [product.imageUrl, product.name, dimensions, maxRetries]);
 
   const handleImageLoad = useCallback(() => {
+    console.log('Image loaded successfully');
     setImageState(prev => ({
       ...prev,
       loading: false,
@@ -1269,8 +1325,9 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
   }, [handleImageError, imageState.retryCount]);
 
   // Initialize image loading
-  useEffect(() => {
+useEffect(() => {
     if (!product.imageUrl) {
+      console.log('No product image URL provided, using fallback');
       setImageState({
         src: generateFallbackUrl(product.name, dimensions.width, dimensions.height),
         loading: false,
@@ -1280,9 +1337,18 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
       return;
     }
 
+    // Reset state for new image loading
+    setImageState(prev => ({
+      ...prev,
+      loading: true,
+      error: false,
+      retryCount: 0
+    }));
+
     const primaryUrl = constructImageUrl(product.imageUrl, dimensions.width, dimensions.height);
     
     if (primaryUrl) {
+      console.log('Loading primary image URL:', primaryUrl);
       setImageState(prev => ({
         ...prev,
         src: primaryUrl,
@@ -1291,13 +1357,26 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
         retryCount: 0
       }));
     } else {
-      // If URL construction fails, use fallback immediately
-      setImageState({
-        src: generateFallbackUrl(product.name, dimensions.width, dimensions.height),
-        loading: false,
-        error: true,
-        retryCount: maxRetries
-      });
+      // If URL construction fails, try the original URL first
+      console.log('Primary URL construction failed, trying original URL');
+      if (validateImageUrl(product.imageUrl)) {
+        setImageState(prev => ({
+          ...prev,
+          src: product.imageUrl,
+          loading: true,
+          error: false,
+          retryCount: 0
+        }));
+      } else {
+        // Use fallback immediately if original URL is also invalid
+        console.log('Original URL also invalid, using fallback immediately');
+        setImageState({
+          src: generateFallbackUrl(product.name, dimensions.width, dimensions.height),
+          loading: false,
+          error: true,
+          retryCount: maxRetries
+        });
+      }
     }
   }, [product.imageUrl, product.name, dimensions]);
 
@@ -1310,24 +1389,27 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
   }
 
   return (
-    <picture className="block w-full h-full">
-      {!imageState.error && (
+<picture className="block w-full h-full">
+      {!imageState.error && imageState.src && !imageState.src.includes('placeholder') && (
         <source
-          srcSet={`${imageState.src} 1x, ${constructImageUrl(product.imageUrl, dimensions.width * 2, dimensions.height * 2) || imageState.src} 2x`}
+          srcSet={`${imageState.src} 1x`}
           type="image/webp"
           onError={(e) => {
             console.warn('WebP source failed, falling back to regular image');
+            // Don't trigger main error handler for source failures
+            e.stopPropagation();
           }}
         />
       )}
       <img
         src={imageState.src}
-        alt={product.name}
+        alt={product.name || 'Product image'}
         className={className}
         style={style}
         loading="lazy"
         onLoad={handleImageLoad}
         onError={handleImageErrorEvent}
+        crossOrigin="anonymous"
       />
       {imageState.loading && (
         <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
