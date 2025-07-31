@@ -222,6 +222,9 @@ async getAllVendors() {
       email: vendor.email,
       company: vendor.company,
       phone: vendor.phone,
+      bankName: vendor.bankName,
+      accountName: vendor.accountName,
+      accountNumber: vendor.accountNumber,
       joinDate: vendor.joinDate,
       isActive: vendor.isActive,
       permissions: vendor.permissions || ['view_products', 'edit_prices']
@@ -244,7 +247,7 @@ async getAllVendors() {
     return { ...vendor };
   }
 
-  async create(vendorData) {
+async create(vendorData) {
     await this.delay(400);
     
     // Validate required fields
@@ -273,6 +276,9 @@ async getAllVendors() {
       company: vendorData.company || '',
       phone: vendorData.phone || '',
       address: vendorData.address || '',
+      bankName: vendorData.bankName || '',
+      accountName: vendorData.accountName || '',
+      accountNumber: vendorData.accountNumber || '',
       joinDate: new Date().toISOString(),
       isActive: vendorData.isActive !== undefined ? vendorData.isActive : true,
       permissions: vendorData.permissions || ['view_products', 'edit_prices'],
@@ -283,7 +289,7 @@ async getAllVendors() {
     return { ...newVendor };
   }
 
-  async update(id, vendorData) {
+async update(id, vendorData) {
     await this.delay(300);
     
     const vendorIndex = this.vendors.findIndex(v => v.Id === parseInt(id));
@@ -361,6 +367,9 @@ async createVendor(vendorData) {
       company: vendorData.company || '',
       phone: vendorData.phone || '',
       address: vendorData.address || '',
+      bankName: vendorData.bankName || '',
+      accountName: vendorData.accountName || '',
+      accountNumber: vendorData.accountNumber || '',
       joinDate: new Date().toISOString(),
       isActive: vendorData.isActive !== undefined ? vendorData.isActive : true,
       permissions: vendorData.permissions || ['view_products', 'edit_prices'],
@@ -375,13 +384,16 @@ async createVendor(vendorData) {
       email: newVendor.email,
       company: newVendor.company,
       phone: newVendor.phone,
+      bankName: newVendor.bankName,
+      accountName: newVendor.accountName,
+      accountNumber: newVendor.accountNumber,
       joinDate: newVendor.joinDate,
       isActive: newVendor.isActive,
       permissions: newVendor.permissions
     };
   }
 
-  async updateVendor(vendorId, vendorData) {
+async updateVendor(vendorId, vendorData) {
     await this.delay(300);
     
     const vendorIndex = this.vendors.findIndex(v => v.Id === parseInt(vendorId));
@@ -420,6 +432,9 @@ async createVendor(vendorData) {
       email: this.vendors[vendorIndex].email,
       company: this.vendors[vendorIndex].company,
       phone: this.vendors[vendorIndex].phone,
+      bankName: this.vendors[vendorIndex].bankName,
+      accountName: this.vendors[vendorIndex].accountName,
+      accountNumber: this.vendors[vendorIndex].accountNumber,
       isActive: this.vendors[vendorIndex].isActive,
       permissions: this.vendors[vendorIndex].permissions
     };

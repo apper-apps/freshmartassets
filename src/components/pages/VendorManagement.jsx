@@ -19,13 +19,16 @@ const VendorManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
-  const [formData, setFormData] = useState({
+const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     company: '',
     phone: '',
     address: '',
+    bankName: '',
+    accountName: '',
+    accountNumber: '',
     isActive: true
   });
   const [formLoading, setFormLoading] = useState(false);
@@ -102,6 +105,9 @@ const resetForm = () => {
       company: '',
       phone: '',
       address: '',
+      bankName: '',
+      accountName: '',
+      accountNumber: '',
       isActive: true
     });
     setEditingVendor(null);
@@ -119,6 +125,9 @@ const handleEdit = async (vendor) => {
       company: vendor.company || '',
       phone: vendor.phone || '',
       address: vendor.address || '',
+      bankName: vendor.bankName || '',
+      accountName: vendor.accountName || '',
+      accountNumber: vendor.accountNumber || '',
       isActive: vendor.isActive
     });
     
@@ -142,7 +151,7 @@ const handleSubmit = async (e) => {
       let vendorResult;
       
       if (editingVendor) {
-        // Update existing vendor
+        // Update existing vendor including payment gateway info
         const updateData = { ...formData };
         if (!updateData.password) {
           delete updateData.password; // Don't update password if empty
@@ -156,7 +165,7 @@ const handleSubmit = async (e) => {
         
         toast.success('Vendor updated successfully');
       } else {
-        // Create new vendor
+        // Create new vendor with payment gateway info
         vendorResult = await vendorService.create(formData);
         
         // Assign products to new vendor if any selected
@@ -388,7 +397,7 @@ const handleSubmit = async (e) => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
-              <tr>
+<tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Vendor
                 </th>
@@ -397,6 +406,9 @@ const handleSubmit = async (e) => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Company
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -410,7 +422,7 @@ const handleSubmit = async (e) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredVendors.map((vendor) => (
+{filteredVendors.map((vendor) => (
                 <tr key={vendor.Id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
@@ -423,6 +435,29 @@ const handleSubmit = async (e) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{vendor.company || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {vendor.bankName && vendor.accountNumber ? (
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-900">{vendor.bankName}</div>
+                        <div className="text-gray-500 flex items-center space-x-2">
+                          <span>{vendor.accountNumber}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(vendor.accountNumber);
+                              toast.success('Account number copied to clipboard');
+                            }}
+                            className="p-1 h-6 w-6 copy-button-mobile"
+                          >
+                            <ApperIcon name="Copy" size={12} />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">Not set</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Badge
@@ -897,7 +932,7 @@ const handleSubmit = async (e) => {
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Vendor Information */}
-                    <div className="space-y-4">
+<div className="space-y-4">
                       <h4 className="text-md font-medium text-gray-900 border-b pb-2">
                         Vendor Information
                       </h4>
@@ -981,6 +1016,78 @@ const handleSubmit = async (e) => {
                           rows={3}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                         />
+                      </div>
+                      
+                      <h4 className="text-md font-medium text-gray-900 border-b pb-2 mt-6">
+                        Payment Gateway Information
+                      </h4>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Bank Name
+                        </label>
+                        <select
+                          name="bankName"
+                          value={formData.bankName}
+                          onChange={handleFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">Select Bank</option>
+                          <option value="HBL">Habib Bank Limited (HBL)</option>
+                          <option value="UBL">United Bank Limited (UBL)</option>
+                          <option value="NBP">National Bank of Pakistan (NBP)</option>
+                          <option value="MCB">MCB Bank Limited</option>
+                          <option value="ABL">Allied Bank Limited (ABL)</option>
+                          <option value="BOP">Bank of Punjab (BOP)</option>
+                          <option value="JazzCash">JazzCash</option>
+                          <option value="EasyPaisa">EasyPaisa</option>
+                          <option value="SadaPay">SadaPay</option>
+                          <option value="NayaPay">NayaPay</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Account Name
+                        </label>
+                        <Input
+                          type="text"
+                          name="accountName"
+                          value={formData.accountName}
+                          onChange={handleFormChange}
+                          placeholder="Account holder name"
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Account Number
+                        </label>
+                        <div className="flex space-x-2">
+                          <Input
+                            type="text"
+                            name="accountNumber"
+                            value={formData.accountNumber}
+                            onChange={handleFormChange}
+                            placeholder="Enter account number"
+                            className="flex-1"
+                          />
+                          {formData.accountNumber && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(formData.accountNumber);
+                                toast.success('Account number copied to clipboard');
+                              }}
+                              className="copy-button-mobile"
+                            >
+                              <ApperIcon name="Copy" size={14} />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center">

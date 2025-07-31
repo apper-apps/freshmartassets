@@ -91,19 +91,20 @@ const ProductAssignment = ({
     }
   };
 
-  const handleAssignProducts = async () => {
+const handleAssignProducts = async () => {
     if (selectedProductIds.length === 0) {
       toast.warning('Please select at least one product to assign');
       return;
     }
 
+    // Just prepare the assignment for preview - don't save yet
     setAssignmentLoading(true);
     try {
-      await productService.assignProductsToVendor(vendor.Id, selectedProductIds);
-      toast.success(`Successfully assigned ${selectedProductIds.length} products to ${vendor.name}`);
+      // Update parent component with selected products for preview
       onAssign?.(selectedProductIds);
+      toast.info(`${selectedProductIds.length} products prepared for assignment. Click "Update Vendor" to save permanently.`);
     } catch (err) {
-      toast.error(err.message || 'Failed to assign products');
+      toast.error(err.message || 'Failed to prepare product assignment');
     } finally {
       setAssignmentLoading(false);
     }
@@ -245,17 +246,17 @@ const ProductAssignment = ({
               </p>
             </div>
             <Button
-              onClick={handleAssignProducts}
+onClick={handleAssignProducts}
               disabled={assignmentLoading}
-              className="bg-primary text-white hover:bg-primary/90"
+              className="bg-blue-600 text-white hover:bg-blue-700"
               size="sm"
             >
               {assignmentLoading ? (
                 <ApperIcon name="Loader2" size={14} className="animate-spin mr-2" />
               ) : (
-                <ApperIcon name="Check" size={14} className="mr-2" />
+                <ApperIcon name="Eye" size={14} className="mr-2" />
               )}
-              Assign Products
+              Prepare Assignment
             </Button>
           </div>
         </div>
