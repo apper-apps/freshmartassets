@@ -1746,8 +1746,8 @@ const EnhancedBulkActionsModal = ({ products, categories, onUpdate, onClose }) =
         filteredProducts = filteredProducts.filter(p => p && p.category === updateData.category);
       }
 
-      const validationPromises = filteredProducts.map(async (product) => {
-        const conflicts = await productService.validateOfferConflicts(product, products, product.id);
+const validationPromises = filteredProducts.map(async (product) => {
+        const conflicts = await productService.validatePricingHierarchy(product, products, product.id);
         return {
           productId: product.id,
           productName: product.name,
