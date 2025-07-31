@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { orderService } from "@/services/api/orderService";
-import { webSocketService } from "@/services/api/websocketService";
+import webSocketService from "@/services/api/websocketService";
 import { productService } from "@/services/api/productService";
 import { vendorService } from "@/services/api/vendorService";
-import { productUnitService } from "@/services/api/productUnitService";
+import productUnitService from "@/services/api/productUnitService";
 import ApperIcon from "@/components/ApperIcon";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
 import Orders from "@/components/pages/Orders";
 import Account from "@/components/pages/Account";
 import Category from "@/components/pages/Category";
-import { Input } from "@/components/atoms/Input";
-import { Button } from "@/components/atoms/Button";
-import { formatCurrency, calculateMargin, calculateTotals } from "@/utils/currency";
+import Input from "@/components/atoms/Input";
+import Button from "@/components/atoms/Button";
+import formatCurrency, { calculateMargin, calculateTotals } from "@/utils/currency";
 
 const VendorPortal = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1813,7 +1813,6 @@ const VendorPackingTab = ({ vendor }) => {
     setPackingData({
 items: order.items?.filter(item => (item.productId % 3 + 1) === vendor.Id).map(item => {
         const fieldConfig = productUnitService.getFieldConfig(item);
-        return {
         return {
           ...item,
           packedQuantity: item.quantity,
