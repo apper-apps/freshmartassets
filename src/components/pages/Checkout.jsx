@@ -450,19 +450,36 @@ const order = await orderService.create(orderData);
         window.performanceMonitor.trackError(error, 'checkout-submission');
       }
       
-      // Enhanced error handling with specific messaging and recovery
+// Enhanced error handling with specific messaging and recovery
       let errorMessage = 'Order failed: ' + error.message;
       let showRetry = false;
       let retryDelay = 2000;
       let errorType = 'general';
       
-      // Comprehensive error classification
+      // Comprehensive error classification with wallet-specific handling
       if (error.code === 'WALLET_PAYMENT_FAILED') {
         errorMessage = error.userGuidance || error.message;
         showRetry = error.retryable !== false;
-        retryDelay = 3000;
         errorType = 'wallet';
-      } else if (error.message.includes('payment')) {
+        
+        // Wallet-specific retry delays and strategies
+        if (error.walletType === 'jazzcash' || error.walletType === 'easypaisa') {
+          retryDelay = 4000; // Longer delay for mobile wallet processing
+          
+          // Enhanced error messaging for mobile wallet failures
+          if (error.reason?.includes('Network connectivity')) {
+            errorMessage = `${error.walletType === 'jazzcash' ? 'JazzCash' : 'EasyPaisa'} payment failed due to network issues. Please check your internet connection and wallet balance, then try again.`;
+            showRetry = true;
+          } else if (error.reason?.includes('Insufficient balance')) {
+            errorMessage = `Insufficient balance in your ${error.walletType === 'jazzcash' ? 'JazzCash' : 'EasyPaisa'} wallet. Please recharge your wallet and try again.`;
+            showRetry = true;
+            retryDelay = 2000; // Shorter delay for balance issues
+          } else if (error.reason?.includes('Transaction limit exceeded')) {
+            errorMessage = `Transaction limit exceeded for your ${error.walletType === 'jazzcash' ? 'JazzCash' : 'EasyPaisa'} wallet. Please try with a different payment method or contact your wallet provider.`;
+            showRetry = false; // Don't retry limit exceeded errors
+          }
+        }
+      } else if (error.message?.includes('payment')) {
         showRetry = !isRetry;
         errorMessage = `Payment processing failed. ${error.message}`;
         errorType = 'payment';

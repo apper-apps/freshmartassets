@@ -113,25 +113,38 @@ async processDigitalWalletPayment(walletType, amount, orderId, phone) {
       throw new Error('Please provide a valid Pakistani phone number');
     }
 
-    const success = Math.random() > 0.05; // 95% success rate for digital wallets
+// Enhanced failure simulation with network awareness
+    const networkConnected = navigator.onLine;
+    const success = Math.random() > (networkConnected ? 0.05 : 0.4); // Higher failure rate when offline
     
     if (!success) {
       // Generate specific error messages for better user experience
       const walletDisplayNames = {
         'jazzcash': 'JazzCash',
-        'easypaisa': 'Easypaisa',
+        'easypaisa': 'EasyPaisa',
         'sadapay': 'SadaPay',
         'nayapay': 'NayaPay'
       };
       
       const displayName = walletDisplayNames[walletType] || walletType;
-      const errorReasons = [
-        'Insufficient balance in your wallet',
+      
+      // Enhanced error reasons with network-aware selection
+      const networkErrorReasons = [
         'Network connectivity issue',
-        'Wallet service temporarily unavailable',
-        'Transaction limit exceeded',
-        'Authentication failed'
+        'Connection timeout',
+        'Service temporarily unreachable'
       ];
+      
+      const walletErrorReasons = [
+        'Insufficient balance in your wallet',
+        'Transaction limit exceeded',
+        'Authentication failed',
+        'Wallet service temporarily unavailable',
+        'Invalid transaction amount'
+      ];
+      
+      const errorReasons = !networkConnected ? networkErrorReasons : 
+        [...walletErrorReasons, ...networkErrorReasons];
       
       const randomReason = errorReasons[Math.floor(Math.random() * errorReasons.length)];
       
@@ -139,8 +152,19 @@ async processDigitalWalletPayment(walletType, amount, orderId, phone) {
       error.code = 'WALLET_PAYMENT_FAILED';
       error.walletType = walletType;
       error.reason = randomReason;
-      error.retryable = true;
-      error.userGuidance = `Please ensure you have sufficient balance in your ${displayName} wallet and try again. If the problem persists, contact ${displayName} support.`;
+      error.networkIssue = !networkConnected || randomReason.includes('Network') || randomReason.includes('Connection');
+      
+      // Enhanced retry logic based on error type
+      if (randomReason.includes('limit exceeded') || randomReason.includes('Authentication failed')) {
+        error.retryable = false;
+        error.userGuidance = `${displayName} payment failed due to ${randomReason.toLowerCase()}. Please contact ${displayName} support or try a different payment method.`;
+      } else if (randomReason.includes('Network') || randomReason.includes('Connection')) {
+        error.retryable = true;
+        error.userGuidance = `Network connectivity issue detected. Please check your internet connection and ensure you have sufficient balance in your ${displayName} wallet, then try again.`;
+      } else {
+        error.retryable = true;
+        error.userGuidance = `Please ensure you have sufficient balance in your ${displayName} wallet and stable internet connection. If the problem persists, contact ${displayName} support.`;
+      }
       
       throw error;
     }

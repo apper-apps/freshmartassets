@@ -25,9 +25,30 @@ export class ErrorHandler {
     return 'general';
   }
 
-  static createUserFriendlyMessage(error, context = '') {
+static createUserFriendlyMessage(error, context = '') {
     const type = this.classifyError(error);
     const contextPrefix = context ? `${context}: ` : '';
+    
+    // Enhanced wallet payment error handling
+    if (error.code === 'WALLET_PAYMENT_FAILED' && error.userGuidance) {
+      return `${contextPrefix}${error.userGuidance}`;
+    }
+    
+    // Enhanced payment-specific messaging
+    if (context?.toLowerCase().includes('payment') || error.message?.includes('payment')) {
+      switch (type) {
+        case 'network':
+          return `${contextPrefix}Payment failed due to network issues. Please check your internet connection and try again.`;
+        case 'timeout':
+          return `${contextPrefix}Payment request timed out. Please check your payment method and try again.`;
+        case 'server':
+          return `${contextPrefix}Payment processing error occurred. Please try again in a few moments.`;
+        case 'validation':
+          return `${contextPrefix}Invalid payment information. Please check your payment details and try again.`;
+        default:
+          return `${contextPrefix}Payment failed. Please try again or use a different payment method.`;
+      }
+    }
     
     switch (type) {
       case 'network':
@@ -52,6 +73,32 @@ static shouldRetry(error, attemptCount = 0, maxRetries = 3) {
     
     const type = this.classifyError(error);
     const retryableTypes = ['network', 'timeout', 'server'];
+    
+    // Enhanced retry logic with wallet payment-specific handling
+    if (error.code === 'WALLET_PAYMENT_FAILED') {
+      // Check if wallet error is explicitly marked as retryable
+      if (error.retryable === false) return false;
+      
+      // Wallet-specific retry limits
+      const walletMaxRetries = error.networkIssue ? maxRetries : Math.min(maxRetries, 2);
+      
+      if (attemptCount >= walletMaxRetries) return false;
+      
+      // Don't retry certain wallet errors
+      const message = error.message?.toLowerCase() || '';
+      if (message.includes('limit exceeded') || 
+          message.includes('authentication failed') ||
+          message.includes('invalid transaction')) {
+        return false;
+      }
+      
+      // Retry network-related wallet errors more aggressively
+      if (error.networkIssue || error.reason?.includes('Network')) {
+        return attemptCount < maxRetries;
+      }
+      
+      return attemptCount < walletMaxRetries;
+    }
     
     // Enhanced retry logic with specific error patterns
     if (retryableTypes.includes(type)) {
@@ -79,14 +126,30 @@ static shouldRetry(error, attemptCount = 0, maxRetries = 3) {
     return false;
   }
 
-  static getRetryDelay(attemptCount, baseDelay = 1000) {
+static getRetryDelay(attemptCount, baseDelay = 1000, error = null) {
+    // Enhanced retry delay with payment-specific timing
+    if (error?.code === 'WALLET_PAYMENT_FAILED') {
+      // Wallet-specific retry delays
+      if (error.networkIssue) {
+        // Faster retries for network issues
+        baseDelay = 2000;
+      } else if (error.reason?.includes('Insufficient balance')) {
+        // Shorter delay for balance issues (user might need to recharge)
+        baseDelay = 1500;
+      } else {
+        // Standard wallet retry delay
+        baseDelay = 3000;
+      }
+    }
+    
     // Exponential backoff with jitter to prevent thundering herd
     const exponentialDelay = baseDelay * Math.pow(2, attemptCount);
     const jitter = Math.random() * 0.1 * exponentialDelay;
     const totalDelay = exponentialDelay + jitter;
     
-    // Cap at 30 seconds
-    return Math.min(totalDelay, 30000);
+    // Cap at 30 seconds (45 seconds for wallet payments)
+    const maxDelay = error?.code === 'WALLET_PAYMENT_FAILED' ? 45000 : 30000;
+    return Math.min(totalDelay, maxDelay);
   }
 
   static trackErrorPattern(error, context = '') {
