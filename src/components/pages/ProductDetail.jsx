@@ -1169,11 +1169,13 @@ const EnhancedImageLoader = ({ product, dimensions, className, style }) => {
     src: null,
     loading: true,
     error: false,
-    retryCount: 0
+    retryCount: 0,
+    timeoutId: null
   });
 
   const maxRetries = 3;
   const retryDelays = [1000, 2000, 4000]; // Exponential backoff
+  const imageTimeout = 8000; // 8 second timeout to match error timing
 
 const validateImageUrl = (url) => {
     try {
@@ -1196,7 +1198,7 @@ const validateImageUrl = (url) => {
     }
   };
 
-  const constructImageUrl = (baseUrl, width, height, quality = 80) => {
+  const constructImageUrl = (baseUrl, width, height, quality = 80, retryAttempt = 0) => {
     try {
       if (!baseUrl || !validateImageUrl(baseUrl)) {
         console.warn('Invalid base URL provided:', baseUrl);
@@ -1208,20 +1210,28 @@ const validateImageUrl = (url) => {
       
       // Handle Unsplash URLs specifically
       if (url.hostname.includes('unsplash.com')) {
-        // Remove problematic parameters that cause loading failures
-        url.searchParams.delete('dpr');
-        url.searchParams.delete('compress');
+        // Remove ALL potentially problematic parameters on first attempt
+        const problematicParams = ['dpr', 'compress', 'fm', 'cs', 'crop', 'face', 'facepad', 'faces', 'fit'];
+        problematicParams.forEach(param => url.searchParams.delete(param));
         
-        // Set optimized parameters for Unsplash
-        url.searchParams.set('w', Math.min(width, 1200).toString());
-        url.searchParams.set('h', Math.min(height, 1200).toString());
-        url.searchParams.set('fit', 'crop');
-        url.searchParams.set('auto', 'format');
-        url.searchParams.set('q', Math.min(quality, 90).toString());
-        
-        // Use jpg for better compatibility instead of webp
-        if (quality < 70) {
-          url.searchParams.set('fm', 'jpg');
+        // Progressive simplification based on retry attempt
+        if (retryAttempt === 0) {
+          // First attempt: optimized parameters
+          url.searchParams.set('w', Math.min(width, 800).toString());
+          url.searchParams.set('h', Math.min(height, 800).toString());
+          url.searchParams.set('fit', 'crop');
+          url.searchParams.set('auto', 'format');
+          url.searchParams.set('q', Math.min(quality, 75).toString());
+          url.searchParams.set('fm', 'jpg'); // Always use JPG for better compatibility
+        } else if (retryAttempt === 1) {
+          // Second attempt: basic parameters only
+          url.searchParams.set('w', Math.min(width, 600).toString());
+          url.searchParams.set('h', Math.min(height, 600).toString());
+          url.searchParams.set('q', '60');
+        } else {
+          // Final attempt: minimal parameters
+          url.searchParams.set('w', '400');
+          url.searchParams.set('h', '400');
         }
       } else {
         // Standard URL construction for other services
@@ -1230,7 +1240,6 @@ const validateImageUrl = (url) => {
         url.searchParams.set('fit', 'crop');
         url.searchParams.set('auto', 'format');
         url.searchParams.set('q', quality.toString());
-        url.searchParams.set('fm', 'webp');
       }
       
       return url.toString();
@@ -1241,36 +1250,54 @@ const validateImageUrl = (url) => {
   };
 
   const generateFallbackUrl = (productName, width, height) => {
-    const encodedName = encodeURIComponent(productName.substring(0, 20));
-    return `https://via.placeholder.com/${width}x${height}/f3f4f6/64748b?text=${encodedName}`;
+    const encodedName = encodeURIComponent(productName.substring(0, 15));
+    return `https://via.placeholder.com/${Math.min(width, 400)}x${Math.min(height, 400)}/f3f4f6/64748b?text=${encodedName}`;
   };
+
+  const clearImageTimeout = useCallback(() => {
+    if (imageState.timeoutId) {
+      clearTimeout(imageState.timeoutId);
+      setImageState(prev => ({ ...prev, timeoutId: null }));
+    }
+  }, [imageState.timeoutId]);
 
 const handleImageError = useCallback(async (error, retryCount = 0) => {
     console.warn(`Image loading failed (attempt ${retryCount + 1}):`, error?.message || 'Unknown error');
+    
+    // Clear any existing timeout
+    clearImageTimeout();
 
     if (retryCount < maxRetries) {
       // Implement exponential backoff retry with enhanced error handling
       const delay = retryDelays[retryCount] || 4000;
       
       setTimeout(() => {
-        // Try different quality levels and formats for retries
-        const qualityLevels = [60, 40, 20];
-        const currentQuality = qualityLevels[retryCount] || 20;
-        
+        // Try progressively simpler URLs for each retry
         let retryUrl = constructImageUrl(
           product.imageUrl, 
           dimensions.width, 
           dimensions.height,
-          currentQuality
+          60, // Lower quality for retries
+          retryCount
         );
 
-        // If constructImageUrl fails, try a simplified approach
+        // If constructImageUrl fails, try increasingly simplified approaches
         if (!retryUrl && product.imageUrl) {
           try {
             const baseUrl = new URL(product.imageUrl);
-            // Remove all parameters and try basic URL
-            baseUrl.search = '';
-            retryUrl = baseUrl.toString();
+            if (retryCount === 0) {
+              // First retry: remove all parameters
+              baseUrl.search = '';
+              retryUrl = baseUrl.toString();
+            } else if (retryCount === 1) {
+              // Second retry: try with just basic size
+              baseUrl.search = '?w=400&h=400';
+              retryUrl = baseUrl.toString();
+            } else {
+              // Final retry: base URL only
+              baseUrl.search = '';
+              retryUrl = baseUrl.toString();
+            }
           } catch (urlError) {
             console.error('Failed to create retry URL:', urlError);
             retryUrl = null;
@@ -1278,7 +1305,7 @@ const handleImageError = useCallback(async (error, retryCount = 0) => {
         }
 
         if (retryUrl) {
-          console.log(`Retrying image load with URL: ${retryUrl}`);
+          console.log(`Retrying image load (${retryCount + 1}/${maxRetries}) with URL: ${retryUrl}`);
           setImageState(prev => ({
             ...prev,
             src: retryUrl,
@@ -1308,23 +1335,25 @@ const handleImageError = useCallback(async (error, retryCount = 0) => {
         error: true
       }));
     }
-  }, [product.imageUrl, product.name, dimensions, maxRetries]);
+  }, [product.imageUrl, product.name, dimensions, maxRetries, clearImageTimeout]);
 
   const handleImageLoad = useCallback(() => {
     console.log('Image loaded successfully');
+    clearImageTimeout();
     setImageState(prev => ({
       ...prev,
       loading: false,
       error: false
     }));
-  }, []);
+  }, [clearImageTimeout]);
 
   const handleImageErrorEvent = useCallback((e) => {
     e.preventDefault();
+    clearImageTimeout();
     handleImageError(new Error('Image load failed'), imageState.retryCount);
-  }, [handleImageError, imageState.retryCount]);
+  }, [handleImageError, imageState.retryCount, clearImageTimeout]);
 
-  // Initialize image loading
+  // Initialize image loading with timeout
 useEffect(() => {
     if (!product.imageUrl) {
       console.log('No product image URL provided, using fallback');
@@ -1332,40 +1361,59 @@ useEffect(() => {
         src: generateFallbackUrl(product.name, dimensions.width, dimensions.height),
         loading: false,
         error: true,
-        retryCount: maxRetries
+        retryCount: maxRetries,
+        timeoutId: null
       });
       return;
     }
+
+    // Clear any existing timeout
+    clearImageTimeout();
 
     // Reset state for new image loading
     setImageState(prev => ({
       ...prev,
       loading: true,
       error: false,
-      retryCount: 0
+      retryCount: 0,
+      timeoutId: null
     }));
 
     const primaryUrl = constructImageUrl(product.imageUrl, dimensions.width, dimensions.height);
     
     if (primaryUrl) {
       console.log('Loading primary image URL:', primaryUrl);
+      
+      // Set up timeout for image loading
+      const timeoutId = setTimeout(() => {
+        console.warn('Image loading timeout reached, triggering error handling');
+        handleImageError(new Error('Image loading timeout'), 0);
+      }, imageTimeout);
+      
       setImageState(prev => ({
         ...prev,
         src: primaryUrl,
         loading: true,
         error: false,
-        retryCount: 0
+        retryCount: 0,
+        timeoutId: timeoutId
       }));
     } else {
       // If URL construction fails, try the original URL first
       console.log('Primary URL construction failed, trying original URL');
       if (validateImageUrl(product.imageUrl)) {
+        const timeoutId = setTimeout(() => {
+          console.warn('Original URL loading timeout, triggering error handling');
+          handleImageError(new Error('Original URL timeout'), 0);
+        }, imageTimeout);
+        
         setImageState(prev => ({
           ...prev,
           src: product.imageUrl,
           loading: true,
           error: false,
-          retryCount: 0
+          retryCount: 0,
+          timeoutId: timeoutId
         }));
       } else {
         // Use fallback immediately if original URL is also invalid
@@ -1374,11 +1422,21 @@ useEffect(() => {
           src: generateFallbackUrl(product.name, dimensions.width, dimensions.height),
           loading: false,
           error: true,
-          retryCount: maxRetries
+          retryCount: maxRetries,
+          timeoutId: null
         });
       }
     }
-  }, [product.imageUrl, product.name, dimensions]);
+  }, [product.imageUrl, product.name, dimensions, handleImageError, clearImageTimeout]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (imageState.timeoutId) {
+        clearTimeout(imageState.timeoutId);
+      }
+    };
+  }, [imageState.timeoutId]);
 
   if (!imageState.src) {
     return (
@@ -1389,18 +1447,7 @@ useEffect(() => {
   }
 
   return (
-<picture className="block w-full h-full">
-      {!imageState.error && imageState.src && !imageState.src.includes('placeholder') && (
-        <source
-          srcSet={`${imageState.src} 1x`}
-          type="image/webp"
-          onError={(e) => {
-            console.warn('WebP source failed, falling back to regular image');
-            // Don't trigger main error handler for source failures
-            e.stopPropagation();
-          }}
-        />
-      )}
+    <div className="relative w-full h-full">
       <img
         src={imageState.src}
         alt={product.name || 'Product image'}
@@ -1409,19 +1456,18 @@ useEffect(() => {
         loading="lazy"
         onLoad={handleImageLoad}
         onError={handleImageErrorEvent}
-        crossOrigin="anonymous"
       />
       {imageState.loading && (
         <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
           <ApperIcon name="Loader" size={24} className="text-gray-400 animate-spin" />
         </div>
       )}
-      {imageState.error && imageState.retryCount > 0 && imageState.retryCount < maxRetries && (
+      {imageState.error && imageState.retryCount > 0 && imageState.retryCount <= maxRetries && (
         <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
           Retrying... ({imageState.retryCount}/{maxRetries})
         </div>
       )}
-    </picture>
+    </div>
 );
 };
 
