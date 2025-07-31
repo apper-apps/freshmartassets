@@ -1133,10 +1133,9 @@ Account Number
                             name="accountNumber"
                             value={formData.accountNumber}
                             onChange={handleFormChange}
-                            placeholder="Enter account number (will be masked)"
+placeholder="Enter account number (will be masked)"
                             className="flex-1"
                           />
-/>
                           {formData.accountNumber && (
                             <Button
                               type="button"
