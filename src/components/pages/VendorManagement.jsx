@@ -30,6 +30,8 @@ const [formData, setFormData] = useState({
     bankName: '',
     accountName: '',
     accountNumber: '',
+    verificationStatus: 'pending',
+    paymentVerificationStatus: 'pending',
     isActive: true
   });
   const [formLoading, setFormLoading] = useState(false);
@@ -123,6 +125,8 @@ const resetForm = () => {
       bankName: '',
       accountName: '',
       accountNumber: '',
+      verificationStatus: 'pending',
+      paymentVerificationStatus: 'pending',
       isActive: true
     });
     setEditingVendor(null);
@@ -143,6 +147,8 @@ const handleEdit = async (vendor) => {
       bankName: vendor.bankName || '',
       accountName: vendor.accountName || '',
       accountNumber: vendor.accountNumber || '',
+      verificationStatus: vendor.verificationStatus || 'pending',
+      paymentVerificationStatus: vendor.paymentVerificationStatus || 'pending',
       isActive: vendor.isActive
     });
     
@@ -423,7 +429,7 @@ const handleSubmit = async (e) => {
                   Company
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment Info
+                  Payment Info & Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -453,10 +459,10 @@ const handleSubmit = async (e) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {vendor.bankName && vendor.accountNumber ? (
-                      <div className="text-sm">
+                      <div className="text-sm space-y-1">
                         <div className="font-medium text-gray-900">{vendor.bankName}</div>
                         <div className="text-gray-500 flex items-center space-x-2">
-                          <span>{vendor.accountNumber}</span>
+                          <span>***{vendor.accountNumber.slice(-4)}</span>
                           <Button
                             variant="outline"
                             size="sm"
@@ -468,6 +474,30 @@ const handleSubmit = async (e) => {
                           >
                             <ApperIcon name="Copy" size={12} />
                           </Button>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Badge
+                            variant={vendor.paymentVerificationStatus === 'approved' ? 'success' : 
+                                   vendor.paymentVerificationStatus === 'rejected' ? 'danger' : 'warning'}
+                            className="text-xs"
+                          >
+                            {vendor.paymentVerificationStatus === 'approved' ? (
+                              <>
+                                <ApperIcon name="CheckCircle" size={10} className="mr-1" />
+                                Approved
+                              </>
+                            ) : vendor.paymentVerificationStatus === 'rejected' ? (
+                              <>
+                                <ApperIcon name="XCircle" size={10} className="mr-1" />
+                                Rejected
+                              </>
+                            ) : (
+                              <>
+                                <ApperIcon name="Clock" size={10} className="mr-1" />
+                                Pending
+                              </>
+                            )}
+                          </Badge>
                         </div>
                       </div>
                     ) : (
@@ -840,7 +870,7 @@ const handleSubmit = async (e) => {
         </div>
       )}
 
-      {/* Verify Proof Modal */}
+{/* Payment Verification Modal */}
       {showVerifyModal && selectedPayment && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -850,7 +880,7 @@ const handleSubmit = async (e) => {
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    Verify Payment Proof
+                    Payment Information Verification
                   </h3>
                   <Button
                     type="button"
@@ -865,7 +895,19 @@ const handleSubmit = async (e) => {
                 <div className="space-y-4">
                   <div className="text-sm text-gray-600">
                     <p><strong>Vendor:</strong> {selectedPayment.vendorName}</p>
-                    <p><strong>Amount:</strong> Rs. {selectedPayment.amount?.toLocaleString()}</p>
+                    <p><strong>Bank:</strong> {selectedPayment.bankName}</p>
+                    <p><strong>Account:</strong> ***{selectedPayment.accountNumber?.slice(-4)}</p>
+                    <p><strong>Account Holder:</strong> {selectedPayment.accountName}</p>
+                  </div>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-center">
+                      <ApperIcon name="Shield" size={16} className="text-yellow-600 mr-2" />
+                      <span className="text-sm font-medium text-yellow-800">Security Notice</span>
+                    </div>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      All payment verification actions are logged and monitored for security purposes.
+                    </p>
                   </div>
                   
                   <div>
@@ -876,7 +918,7 @@ const handleSubmit = async (e) => {
                       value={verificationNotes}
                       onChange={(e) => setVerificationNotes(e.target.value)}
                       rows={3}
-                      placeholder="Add notes about the verification..."
+                      placeholder="Add notes about the verification decision..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   </div>
@@ -894,7 +936,7 @@ const handleSubmit = async (e) => {
                   ) : (
                     <ApperIcon name="CheckCircle" size={16} className="mr-2" />
                   )}
-                  Approve
+                  Approve Payment Info
                 </Button>
                 <Button
                   onClick={() => handleVerifySubmit(false)}
@@ -906,7 +948,7 @@ const handleSubmit = async (e) => {
                   ) : (
                     <ApperIcon name="XCircle" size={16} className="mr-2" />
                   )}
-                  Reject
+                  Reject Payment Info
                 </Button>
                 <Button
                   type="button"
@@ -921,7 +963,6 @@ const handleSubmit = async (e) => {
           </div>
         </div>
       )}
-
       {/* Add/Edit Vendor Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -1034,9 +1075,16 @@ const handleSubmit = async (e) => {
                       </div>
                       
                       <h4 className="text-md font-medium text-gray-900 border-b pb-2 mt-6">
-                        Payment Gateway Information
+Payment Gateway Information
+                        <Badge 
+                          variant={formData.paymentVerificationStatus === 'approved' ? 'success' : 
+                                 formData.paymentVerificationStatus === 'rejected' ? 'danger' : 'warning'}
+                          className="ml-2 text-xs"
+                        >
+                          {formData.paymentVerificationStatus === 'approved' ? 'Verified' : 
+                           formData.paymentVerificationStatus === 'rejected' ? 'Rejected' : 'Pending Verification'}
+                        </Badge>
                       </h4>
-                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Bank Name
@@ -1077,17 +1125,18 @@ const handleSubmit = async (e) => {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Account Number
+Account Number
                         </label>
                         <div className="flex space-x-2">
                           <Input
-                            type="text"
+                            type="password"
                             name="accountNumber"
                             value={formData.accountNumber}
                             onChange={handleFormChange}
-                            placeholder="Enter account number"
+                            placeholder="Enter account number (will be masked)"
                             className="flex-1"
                           />
+/>
                           {formData.accountNumber && (
                             <Button
                               type="button"
@@ -1102,6 +1151,32 @@ const handleSubmit = async (e) => {
                               <ApperIcon name="Copy" size={14} />
                             </Button>
                           )}
+                        </div>
+                        {formData.accountNumber && (
+                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                            <div className="flex items-center text-blue-800">
+                              <ApperIcon name="Shield" size={12} className="mr-1" />
+                              <span className="font-medium">Security Preview:</span>
+                              <span className="ml-2">***{formData.accountNumber.slice(-4)}</span>
+                            </div>
+                            <p className="text-blue-700 text-xs mt-1">Account number will be masked in displays for security</p>
+                          </div>
+                        )}
+                        
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Verification Status
+                          </label>
+                          <select
+                            name="paymentVerificationStatus"
+                            value={formData.paymentVerificationStatus}
+                            onChange={handleFormChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                          >
+                            <option value="pending">Pending Verification</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
                         </div>
                       </div>
                       

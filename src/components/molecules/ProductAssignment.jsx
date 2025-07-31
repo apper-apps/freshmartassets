@@ -97,12 +97,19 @@ const handleAssignProducts = async () => {
       return;
     }
 
-    // Just prepare the assignment for preview - don't save yet
+    // Enhanced UX: Clear messaging about assigned products only
     setAssignmentLoading(true);
     try {
       // Update parent component with selected products for preview
       onAssign?.(selectedProductIds);
-      toast.info(`${selectedProductIds.length} products prepared for assignment. Click "Update Vendor" to save permanently.`);
+      toast.info(
+        `${selectedProductIds.length} product${selectedProductIds.length !== 1 ? 's' : ''} prepared for ${vendor?.name || 'vendor'}. ` +
+        `These will be the ONLY products visible to this vendor. Click "Update Vendor" to save permanently.`, 
+        { 
+          duration: 6000,
+          icon: '📦'
+        }
+      );
     } catch (err) {
       toast.error(err.message || 'Failed to prepare product assignment');
     } finally {

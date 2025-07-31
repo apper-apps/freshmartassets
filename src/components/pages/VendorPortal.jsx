@@ -11,9 +11,10 @@ import Error from "@/components/ui/Error";
 import Orders from "@/components/pages/Orders";
 import Account from "@/components/pages/Account";
 import Category from "@/components/pages/Category";
+import Badge from "@/components/atoms/Badge";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
-import formatCurrency, { calculateMargin, calculateTotals } from "@/utils/currency";
+import { formatCurrency, calculateMargin, calculateTotals } from "@/utils/currency";
 
 const VendorPortal = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1161,12 +1162,50 @@ value={formData.address}
               onChange={handleInputChange}
             />
             
-            {/* Payment Gateway Section */}
+{/* Payment Gateway Section */}
             <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <ApperIcon name="CreditCard" size={20} className="mr-2" />
-                Payment Gateway Information
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                  <ApperIcon name="CreditCard" size={20} className="mr-2" />
+                  Payment Gateway Information
+                </h3>
+                <div className="flex items-center space-x-2">
+                  <Badge 
+                    variant={vendor.paymentVerificationStatus === 'approved' ? 'success' : 
+                           vendor.paymentVerificationStatus === 'rejected' ? 'danger' : 'warning'}
+                    className="text-xs"
+                  >
+                    {vendor.paymentVerificationStatus === 'approved' ? (
+                      <>
+                        <ApperIcon name="CheckCircle" size={10} className="mr-1" />
+                        Verified
+                      </>
+                    ) : vendor.paymentVerificationStatus === 'rejected' ? (
+                      <>
+                        <ApperIcon name="XCircle" size={10} className="mr-1" />
+                        Rejected
+                      </>
+                    ) : (
+                      <>
+                        <ApperIcon name="Clock" size={10} className="mr-1" />
+                        Pending
+                      </>
+                    )}
+                  </Badge>
+                </div>
+              </div>
+              
+              {vendor.paymentVerificationStatus === 'pending' && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <ApperIcon name="AlertTriangle" size={16} className="text-yellow-600 mr-2" />
+                    <span className="text-sm font-medium text-yellow-800">Approval Required</span>
+                  </div>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Payment information changes require admin approval for security.
+                  </p>
+                </div>
+              )}
               
               {/* Bank Details */}
               <div className="mb-6">
@@ -1179,13 +1218,24 @@ value={formData.address}
                     onChange={handleInputChange}
                     placeholder="Enter account title"
                   />
-                  <Input
-                    label="Account Number"
-                    name="bankDetails.accountNumber"
-                    value={formData.bankDetails.accountNumber}
-                    onChange={handleInputChange}
-                    placeholder="Enter account number"
-                  />
+                  <div>
+                    <Input
+                      label="Account Number"
+                      name="bankDetails.accountNumber"
+                      type="password"
+                      value={formData.bankDetails.accountNumber}
+                      onChange={handleInputChange}
+                      placeholder="Enter account number"
+                    />
+                    {formData.bankDetails.accountNumber && (
+                      <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                        <div className="flex items-center text-blue-800">
+                          <ApperIcon name="Shield" size={10} className="mr-1" />
+                          <span>Secure: ***{formData.bankDetails.accountNumber.slice(-4)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <Input
                     label="Bank Name"
                     name="bankDetails.bankName"
@@ -1230,6 +1280,18 @@ value={formData.address}
                   />
                 </div>
               </div>
+
+              {/* Admin Approval Notice */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center mb-2">
+                  <ApperIcon name="Info" size={14} className="text-gray-600 mr-2" />
+                  <span className="text-sm font-medium text-gray-800">Security Notice</span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Changes to payment information require admin verification for security purposes. 
+                  You will be notified once your updates are reviewed.
+                </p>
+              </div>
             </div>
 
             <div className="flex space-x-3 pt-4">
@@ -1248,10 +1310,13 @@ value={formData.address}
                 {loading ? (
                   <>
                     <ApperIcon name="Loader2" size={16} className="animate-spin mr-2" />
-                    Saving...
+                    Submitting for Approval...
                   </>
                 ) : (
-                  'Save Changes'
+                  <>
+                    <ApperIcon name="Send" size={16} className="mr-2" />
+                    Submit for Approval
+                  </>
                 )}
               </Button>
             </div>
@@ -1290,10 +1355,34 @@ value={formData.address}
 
             {/* Payment Gateway Display Section */}
             <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <ApperIcon name="CreditCard" size={20} className="mr-2" />
-                Payment Gateway Information
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                  <ApperIcon name="CreditCard" size={20} className="mr-2" />
+                  Payment Gateway Information
+                </h3>
+                <Badge 
+                  variant={vendor.paymentVerificationStatus === 'approved' ? 'success' : 
+                         vendor.paymentVerificationStatus === 'rejected' ? 'danger' : 'warning'}
+                  className="text-xs"
+                >
+                  {vendor.paymentVerificationStatus === 'approved' ? (
+                    <>
+                      <ApperIcon name="CheckCircle" size={10} className="mr-1" />
+                      Verified
+                    </>
+                  ) : vendor.paymentVerificationStatus === 'rejected' ? (
+                    <>
+                      <ApperIcon name="XCircle" size={10} className="mr-1" />
+                      Rejected
+                    </>
+                  ) : (
+                    <>
+                      <ApperIcon name="Clock" size={10} className="mr-1" />
+                      Pending
+                    </>
+                  )}
+                </Badge>
+              </div>
               
               {/* Bank Details Display */}
               <div className="mb-6">
@@ -1309,7 +1398,17 @@ value={formData.address}
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Account Number
                     </label>
-                    <p className="text-sm text-gray-900">{vendor.bankDetails?.accountNumber || 'Not specified'}</p>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm text-gray-900">
+                        {vendor.bankDetails?.accountNumber ? `***${vendor.bankDetails.accountNumber.slice(-4)}` : 'Not specified'}
+                      </p>
+                      {vendor.bankDetails?.accountNumber && (
+                        <div className="flex items-center">
+                          <ApperIcon name="Shield" size={12} className="text-blue-600" />
+                          <span className="text-xs text-blue-600 ml-1">Masked for security</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1346,7 +1445,7 @@ value={formData.address}
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       U Paisa
                     </label>
-<p className="text-sm text-gray-900">{vendor.mobileWallet?.uPaisa || 'Not specified'}</p>
+                    <p className="text-sm text-gray-900">{vendor.mobileWallet?.uPaisa || 'Not specified'}</p>
                   </div>
                 </div>
               </div>

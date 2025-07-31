@@ -258,6 +258,8 @@ async getAllVendors() {
       bankName: vendor.bankName,
       accountName: vendor.accountName,
       accountNumber: vendor.accountNumber,
+      verificationStatus: vendor.verificationStatus || 'pending',
+      paymentVerificationStatus: vendor.paymentVerificationStatus || 'pending',
       joinDate: vendor.joinDate,
       isActive: vendor.isActive,
       permissions: vendor.permissions || ['view_products', 'edit_prices']
@@ -508,7 +510,7 @@ async updateVendor(vendorId, vendorData) {
   }
 
   // Admin control functions
-  async toggleVendorStatus(vendorId, status) {
+async toggleVendorStatus(vendorId, status) {
     await this.delay(300);
     
     const vendorIndex = this.vendors.findIndex(v => v.Id === parseInt(vendorId));
@@ -522,6 +524,15 @@ async updateVendor(vendorId, vendorData) {
     this.vendors[vendorIndex].statusLastUpdated = new Date().toISOString();
     this.vendors[vendorIndex].lastUpdatedBy = 'admin';
     
+    // Log the action
+    await this.logAdminAction({
+      type: 'vendor_status_change',
+      vendorId: vendorId,
+      oldStatus: this.vendors[vendorIndex].isActive ? 'inactive' : 'active',
+      newStatus: isActive ? 'active' : 'inactive',
+      reason: 'Admin status toggle'
+    });
+    
     return {
       Id: this.vendors[vendorIndex].Id,
       name: this.vendors[vendorIndex].name,
@@ -530,20 +541,86 @@ async updateVendor(vendorId, vendorData) {
     };
   }
 
+  async updatePaymentVerificationStatus(vendorId, status, notes = '') {
+    await this.delay(300);
+    
+    const vendorIndex = this.vendors.findIndex(v => v.Id === parseInt(vendorId));
+    
+    if (vendorIndex === -1) {
+      throw new Error('Vendor not found');
+    }
+    
+    const oldStatus = this.vendors[vendorIndex].paymentVerificationStatus;
+    this.vendors[vendorIndex].paymentVerificationStatus = status;
+    this.vendors[vendorIndex].paymentVerificationDate = new Date().toISOString();
+    this.vendors[vendorIndex].paymentVerificationNotes = notes;
+    this.vendors[vendorIndex].lastUpdatedBy = 'admin';
+    
+    // Log the payment verification action
+    await this.logAdminAction({
+      type: 'payment_verification',
+      vendorId: vendorId,
+      oldStatus: oldStatus,
+      newStatus: status,
+      notes: notes,
+      securityLevel: 'high'
+    });
+    
+    return {
+      Id: this.vendors[vendorIndex].Id,
+      name: this.vendors[vendorIndex].name,
+      paymentVerificationStatus: status,
+      paymentVerificationDate: this.vendors[vendorIndex].paymentVerificationDate
+    };
+  }
+
   async logAdminAction(action) {
     await this.delay(100);
     
     const logEntry = {
-      action: action,
+      ...action,
       timestamp: new Date().toISOString(),
       adminId: 'current_admin', // In real app, get from session
-      type: 'vendor_management'
+      sessionId: 'admin_session_' + Date.now(),
+      ipAddress: '127.0.0.1', // In real app, get actual IP
+      userAgent: navigator.userAgent
     };
     
-    // In real implementation, this would save to database
-    console.log('Admin Action Logged:', logEntry);
+    // In real implementation, this would save to secure audit database
+    console.log('Admin Action Logged (Security Audit):', logEntry);
+    
+    // Store in localStorage for demo purposes
+    const existingLogs = JSON.parse(localStorage.getItem('adminSecurityLogs') || '[]');
+    existingLogs.push(logEntry);
+    // Keep only last 100 logs for demo
+    if (existingLogs.length > 100) {
+      existingLogs.splice(0, existingLogs.length - 100);
+    }
+    localStorage.setItem('adminSecurityLogs', JSON.stringify(existingLogs));
     
     return logEntry;
+  }
+
+  async getSecurityLogs(filter = {}) {
+    await this.delay(200);
+    
+    const logs = JSON.parse(localStorage.getItem('adminSecurityLogs') || '[]');
+    
+    let filteredLogs = logs;
+    
+    if (filter.vendorId) {
+      filteredLogs = filteredLogs.filter(log => log.vendorId === parseInt(filter.vendorId));
+    }
+    
+    if (filter.type) {
+      filteredLogs = filteredLogs.filter(log => log.type === filter.type);
+    }
+    
+    if (filter.securityLevel) {
+      filteredLogs = filteredLogs.filter(log => log.securityLevel === filter.securityLevel);
+    }
+    
+    return filteredLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }
 
   async notifyVendor(vendorId, message) {
