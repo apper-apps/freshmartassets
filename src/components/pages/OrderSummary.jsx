@@ -568,8 +568,8 @@ if (!order) {
                               {expandedVendor === vendorName && (
                                 <div className="bg-gray-50 p-3">
                                   <div className="space-y-2">
-                                    {vendorData.items.map((item) => (
-                                      <div key={item.productId} className="bg-white border rounded-lg p-3 text-sm">
+{vendorData.items.map((item, index) => (
+                                      <div key={`${item.productId || 'item'}-${index}`} className="bg-white border rounded-lg p-3 text-sm">
                                         <div className="flex justify-between items-start mb-2">
                                           <h4 className="font-medium text-gray-900 text-sm leading-tight">{item.name}</h4>
                                           {isAdmin && getAvailabilityBadge(getAvailabilityStatus(item.productId, vendorData.vendorId))}
@@ -616,8 +616,8 @@ if (!order) {
                               </div>
                               
                               <div className="p-4 space-y-3">
-                                {vendorData.items.map((item) => (
-                                  <div key={item.productId} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+{vendorData.items.map((item, index) => (
+                                  <div key={`${item.productId || 'item'}-${index}`} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
                                     <div className="flex-1">
                                       <h4 className="font-medium text-gray-900">{item.name}</h4>
                                       <p className="text-sm text-gray-600">
@@ -867,8 +867,8 @@ if (!order) {
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100">
-                                    {vendorInfo.items?.map((item) => (
-                                      <tr key={item.productId} className="hover:bg-gray-50">
+{vendorInfo.items?.map((item, index) => (
+                                      <tr key={`${item.productId || 'item'}-${index}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-2 sm:px-3 font-medium text-gray-900 text-xs sm:text-sm">{item.name}</td>
                                         <td className="py-2 px-1 sm:px-3 text-center text-gray-600 text-xs">
                                           {item.quantity} {item.unit}
