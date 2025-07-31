@@ -200,8 +200,8 @@ const VendorDashboard = ({ vendor, onLogout, onProfileUpdate }) => {
   const loadVendorData = async () => {
     if (!vendor) return;
     
-    setLoading(true);
-setError(null);
+setLoading(true);
+    setError(null);
     try {
       const [vendorProducts, vendorStats] = await Promise.all([
         productService.getVendorProducts(vendor.Id),
@@ -342,7 +342,7 @@ const tabs = [
                   <p className="text-sm font-medium text-gray-600">Total Products</p>
                   <p className="text-2xl font-semibold text-gray-900">{stats.totalProducts}</p>
                 </div>
-              </div>
+</div>
             </div>
             
             <div className="bg-white rounded-lg shadow p-6">
@@ -355,7 +355,7 @@ const tabs = [
                   <p className="text-2xl font-semibold text-gray-900">{stats.averageMargin}%</p>
                 </div>
               </div>
-</div>
+            </div>
             
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
@@ -386,8 +386,8 @@ const tabs = [
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow">
-<div className="border-b border-gray-200">
+<div className="bg-white rounded-lg shadow">
+          <div className="border-b border-gray-200">
             <nav className="flex flex-wrap gap-2 sm:space-x-8 overflow-x-auto pb-2">
               {tabs.map((tab) => (
                 <button
@@ -413,8 +413,8 @@ const tabs = [
             {loading ? (
               <Loading type="component" />
             ) : error ? (
-              <Error message={error} />
-) : (
+<Error message={error} />
+            ) : (
               <>
                 {activeTab === 'products' && (
                   <VendorProductsTab 
@@ -426,8 +426,8 @@ const tabs = [
                 {activeTab === 'availability' && (
                   <VendorAvailabilityTab 
                     vendor={vendor}
-                  />
-)}
+/>
+                )}
                 {activeTab === 'packing' && (
                   <VendorPackingTab
                     vendor={vendor}
@@ -557,8 +557,8 @@ const VendorProductsTab = ({ products, vendor, onProductUpdate }) => {
                       <div className="text-sm text-gray-500">
                         {product.unit}
                       </div>
-                    </div>
 </div>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {product.category}
@@ -1018,7 +1018,7 @@ const EditPriceModal = ({ product, vendor, onSave, onClose }) => {
 
 // Vendor Profile Tab Component
 const VendorProfileTab = ({ vendor, onProfileUpdate }) => {
-const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: vendor.name,
     email: vendor.email,
@@ -1158,9 +1158,10 @@ const handleCancel = () => {
               type="text"
               name="address"
               label="Address"
-              value={formData.address}
-onChange={handleInputChange}
+value={formData.address}
+              onChange={handleInputChange}
             />
+            
             {/* Payment Gateway Section */}
             <div className="mt-8 pt-6 border-t border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
@@ -1350,9 +1351,11 @@ onChange={handleInputChange}
                   </div>
                 </div>
               </div>
+</div>
             </div>
-            </div>
-            
+          </div>
+        ) : (
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Address
@@ -1371,8 +1374,8 @@ onChange={handleInputChange}
                     className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
                   >
                     {permission.replace('_', ' ')}
-                  </span>
-))}
+</span>
+                ))}
               </div>
             </div>
           </div>
@@ -1811,8 +1814,8 @@ const VendorPackingTab = ({ vendor }) => {
 
   const handleStartPacking = (order) => {
     setSelectedOrder(order);
-    setPackingData({
-items: order.items?.filter(item => (item.productId % 3 + 1) === vendor.Id).map(item => {
+setPackingData({
+      items: order.items?.filter(item => (item.productId % 3 + 1) === vendor.Id).map(item => {
         const fieldConfig = productUnitService.getFieldConfig(item);
         return {
           ...item,
@@ -1823,10 +1826,11 @@ items: order.items?.filter(item => (item.productId % 3 + 1) === vendor.Id).map(i
           verified: false,
           fieldConfig
         };
-      }) || []
+}) || []
     });
   };
-const handleItemVerification = (itemIndex, field, value) => {
+
+  const handleItemVerification = (itemIndex, field, value) => {
     setPackingData(prev => ({
       ...prev,
       items: prev.items.map((item, index) => {
@@ -1873,8 +1877,9 @@ const handleItemVerification = (itemIndex, field, value) => {
       };
       reader.readAsDataURL(file);
     }
-  };
-const handlePackingComplete = async () => {
+};
+
+  const handlePackingComplete = async () => {
     // Validate that all items are verified or properly skipped
     const invalidItems = packingData.items.filter(item => {
       if (!item.verified) return true;
@@ -2036,7 +2041,6 @@ const handlePackingComplete = async () => {
                 Packing Order #{selectedOrder.id}
               </h3>
             </div>
-            
 <div className="p-6 space-y-6">
               {/* Items Checklist */}
               <div>
@@ -2136,9 +2140,9 @@ const handlePackingComplete = async () => {
                     </div>
                   ))}
                 </div>
-              </div>
 </div>
-              
+              </div>
+            </div>
               {/* Photo Capture - Optional */}
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -2243,8 +2247,8 @@ const handlePackingComplete = async () => {
                 }}
                 variant="outline"
               >
-                Cancel
-</Button>
+Cancel
+              </Button>
               <Button
                 onClick={handlePackingComplete}
                 variant="primary"
