@@ -371,8 +371,8 @@ const [formData, setFormData] = useState({
         barcode: formData.barcode || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       };
 
-      // Validate offer conflicts before saving
-      const conflictValidation = await productService.validateOfferConflicts(
+// Validate offer conflicts before saving
+      const conflictValidation = await productService.validatePricingHierarchy(
         productData, 
         products, 
         editingProduct?.id
