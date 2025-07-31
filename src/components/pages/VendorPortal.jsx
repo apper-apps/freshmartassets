@@ -1824,12 +1824,11 @@ const handleStartPacking = (order) => {
     });
   };
 
-  const handleItemVerification = (itemIndex, field, value) => {
+const handleItemVerification = (itemIndex, field, value) => {
     setPackingData(prev => ({
       ...prev,
-setPackingData(prev => ({
-      ...prev,
       items: prev.items.map((item, index) => {
+        if (index !== itemIndex) return item;
         
         const updatedItem = { ...item, [field]: value };
         
@@ -1860,6 +1859,7 @@ setPackingData(prev => ({
   };
 
   const handlePhotoCapture = (event) => {
+const handlePhotoCapture = (event) => {
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
@@ -1872,7 +1872,6 @@ setPackingData(prev => ({
       };
       reader.readAsDataURL(file);
     }
-};
 
   const handlePackingComplete = async () => {
     // Validate that all items are verified or properly skipped
