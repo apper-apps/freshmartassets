@@ -355,8 +355,9 @@ const tabs = [
                   <p className="text-2xl font-semibold text-gray-900">{stats.averageMargin}%</p>
                 </div>
               </div>
-            </div>
-<div className="bg-white rounded-lg shadow p-6">
+</div>
+            
+            <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-yellow-100 rounded-lg">
                   <ApperIcon name="DollarSign" size={24} className="text-yellow-600" />
