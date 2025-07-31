@@ -197,17 +197,16 @@ const VendorDashboard = ({ vendor, onLogout, onProfileUpdate }) => {
     loadVendorData();
   }, [vendor]);
 
-  const loadVendorData = async () => {
+const loadVendorData = async () => {
     if (!vendor) return;
     
-setLoading(true);
+    setLoading(true);
     setError(null);
     try {
       const [vendorProducts, vendorStats] = await Promise.all([
         productService.getVendorProducts(vendor.Id),
         productService.getVendorStats(vendor.Id)
       ]);
-      
       setProducts(vendorProducts);
       
       // Calculate enhanced stats with cost/selling/margin totals
@@ -339,10 +338,10 @@ const tabs = [
                   <ApperIcon name="Package" size={24} className="text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Products</p>
+<p className="text-sm font-medium text-gray-600">Total Products</p>
                   <p className="text-2xl font-semibold text-gray-900">{stats.totalProducts}</p>
                 </div>
-</div>
+              </div>
             </div>
             
             <div className="bg-white rounded-lg shadow p-6">
@@ -384,9 +383,9 @@ const tabs = [
         </div>
       )}
 
-      {/* Tabs */}
+{/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-<div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-lg shadow">
           <div className="border-b border-gray-200">
             <nav className="flex flex-wrap gap-2 sm:space-x-8 overflow-x-auto pb-2">
               {tabs.map((tab) => (
@@ -410,23 +409,23 @@ const tabs = [
           </div>
 
           <div className="p-6">
-            {loading ? (
+{loading ? (
               <Loading type="component" />
             ) : error ? (
-<Error message={error} />
+              <Error message={error} />
             ) : (
               <>
                 {activeTab === 'products' && (
-                  <VendorProductsTab 
+                  <VendorProductsTab
                     products={products}
                     vendor={vendor}
                     onProductUpdate={handleProductUpdate}
                   />
                 )}
-                {activeTab === 'availability' && (
+{activeTab === 'availability' && (
                   <VendorAvailabilityTab 
                     vendor={vendor}
-/>
+                  />
                 )}
                 {activeTab === 'packing' && (
                   <VendorPackingTab
@@ -554,10 +553,10 @@ const VendorProductsTab = ({ products, vendor, onProductUpdate }) => {
                       <div className="text-sm font-medium text-gray-900">
                         {product.name}
                       </div>
-                      <div className="text-sm text-gray-500">
+<div className="text-sm text-gray-500">
                         {product.unit}
                       </div>
-</div>
+                    </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -1347,22 +1346,18 @@ value={formData.address}
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       U Paisa
                     </label>
-                    <p className="text-sm text-gray-900">{vendor.mobileWallet?.uPaisa || 'Not specified'}</p>
+<p className="text-sm text-gray-900">{vendor.mobileWallet?.uPaisa || 'Not specified'}</p>
                   </div>
                 </div>
               </div>
-</div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Address
               </label>
               <p className="text-sm text-gray-900">{vendor.address || 'Not specified'}</p>
             </div>
-            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Permissions
@@ -1371,10 +1366,10 @@ value={formData.address}
                 {vendor.permissions?.map((permission) => (
                   <span
                     key={permission}
-                    className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
+className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
                   >
                     {permission.replace('_', ' ')}
-</span>
+                  </span>
                 ))}
               </div>
             </div>
@@ -1811,10 +1806,9 @@ const VendorPackingTab = ({ vendor }) => {
       setLoading(false);
     }
   };
-
-  const handleStartPacking = (order) => {
+const handleStartPacking = (order) => {
     setSelectedOrder(order);
-setPackingData({
+    setPackingData({
       items: order.items?.filter(item => (item.productId % 3 + 1) === vendor.Id).map(item => {
         const fieldConfig = productUnitService.getFieldConfig(item);
         return {
@@ -1826,15 +1820,16 @@ setPackingData({
           verified: false,
           fieldConfig
         };
-}) || []
+      }) || []
     });
   };
 
   const handleItemVerification = (itemIndex, field, value) => {
     setPackingData(prev => ({
       ...prev,
+setPackingData(prev => ({
+      ...prev,
       items: prev.items.map((item, index) => {
-        if (index !== itemIndex) return item;
         
         const updatedItem = { ...item, [field]: value };
         
@@ -2037,11 +2032,12 @@ setPackingData({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+<h3 className="text-lg font-semibold text-gray-900">
                 Packing Order #{selectedOrder.id}
               </h3>
             </div>
-<div className="p-6 space-y-6">
+            
+            <div className="p-6 space-y-6">
               {/* Items Checklist */}
               <div>
                 <h4 className="font-medium text-gray-900 mb-3">Items Verification</h4>
@@ -2137,17 +2133,16 @@ setPackingData({
                           )}
                         </div>
                       </div>
-                    </div>
+</div>
                   ))}
                 </div>
-</div>
               </div>
-            </div>
+              
               {/* Photo Capture - Optional */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-medium text-gray-900">
-                    Package Photo 
+                    Package Photo
                     <span className="text-gray-500 text-sm font-normal ml-2">(Optional)</span>
                   </h4>
                   
@@ -2243,15 +2238,14 @@ setPackingData({
                 onClick={() => {
                   setSelectedOrder(null);
                   setPackingData({});
-                  setPhotoCapture(null);
+setPhotoCapture(null);
                 }}
                 variant="outline"
               >
-Cancel
+                Cancel
               </Button>
               <Button
                 onClick={handlePackingComplete}
-                variant="primary"
                 disabled={!packingData.items?.every(item => item.verified)}
               >
                 <ApperIcon name="CheckCircle" size={16} className="mr-2" />
