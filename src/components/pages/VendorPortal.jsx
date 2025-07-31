@@ -1858,7 +1858,6 @@ const handleItemVerification = (itemIndex, field, value) => {
     }));
   };
 
-  const handlePhotoCapture = (event) => {
 const handlePhotoCapture = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -1872,7 +1871,7 @@ const handlePhotoCapture = (event) => {
       };
       reader.readAsDataURL(file);
     }
-
+  };
   const handlePackingComplete = async () => {
     // Validate that all items are verified or properly skipped
     const invalidItems = packingData.items.filter(item => {
