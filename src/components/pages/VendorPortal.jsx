@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import formatCurrency from "@/utils/currency";
-import ApperIcon from "@/components/ApperIcon";
-import Button from "@/components/atoms/Button";
-import Input from "@/components/atoms/Input";
-import Error from "@/components/ui/Error";
-import Loading from "@/components/ui/Loading";
-import Orders from "@/components/pages/Orders";
-import Category from "@/components/pages/Category";
 import { orderService } from "@/services/api/orderService";
-import { vendorService } from "@/services/api/vendorService";
+import { webSocketService } from "@/services/api/websocketService";
 import { productService } from "@/services/api/productService";
+import { vendorService } from "@/services/api/vendorService";
 import { productUnitService } from "@/services/api/productUnitService";
+import ApperIcon from "@/components/ApperIcon";
+import Loading from "@/components/ui/Loading";
+import Error from "@/components/ui/Error";
+import Orders from "@/components/pages/Orders";
+import Account from "@/components/pages/Account";
+import Category from "@/components/pages/Category";
+import { Input } from "@/components/atoms/Input";
+import { Button } from "@/components/atoms/Button";
+import { formatCurrency, calculateMargin, calculateTotals } from "@/utils/currency";
 
 const VendorPortal = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -199,8 +201,8 @@ const VendorDashboard = ({ vendor, onLogout, onProfileUpdate }) => {
     if (!vendor) return;
     
     setLoading(true);
-    setError(null);
-try {
+setError(null);
+    try {
       const [vendorProducts, vendorStats] = await Promise.all([
         productService.getVendorProducts(vendor.Id),
         productService.getVendorStats(vendor.Id)
@@ -354,7 +356,6 @@ const tabs = [
                 </div>
               </div>
             </div>
-            
 <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-yellow-100 rounded-lg">
@@ -385,8 +386,8 @@ const tabs = [
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow">
-          <div className="border-b border-gray-200">
-<nav className="flex flex-wrap gap-2 sm:space-x-8 overflow-x-auto pb-2">
+<div className="border-b border-gray-200">
+            <nav className="flex flex-wrap gap-2 sm:space-x-8 overflow-x-auto pb-2">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -412,8 +413,8 @@ const tabs = [
               <Loading type="component" />
             ) : error ? (
               <Error message={error} />
-            ) : (
-<>
+) : (
+              <>
                 {activeTab === 'products' && (
                   <VendorProductsTab 
                     products={products}
@@ -425,9 +426,9 @@ const tabs = [
                   <VendorAvailabilityTab 
                     vendor={vendor}
                   />
-                )}
-{activeTab === 'packing' && (
-                  <VendorPackingTab 
+)}
+                {activeTab === 'packing' && (
+                  <VendorPackingTab
                     vendor={vendor}
                   />
                 )}
@@ -556,8 +557,8 @@ const VendorProductsTab = ({ products, vendor, onProductUpdate }) => {
                         {product.unit}
                       </div>
                     </div>
-                  </div>
-</td>
+</div>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {product.category}
                 </td>
@@ -1016,23 +1017,48 @@ const EditPriceModal = ({ product, vendor, onSave, onClose }) => {
 
 // Vendor Profile Tab Component
 const VendorProfileTab = ({ vendor, onProfileUpdate }) => {
-  const [isEditing, setIsEditing] = useState(false);
+const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: vendor.name,
     email: vendor.email,
     company: vendor.company || '',
     phone: vendor.phone || '',
-    address: vendor.address || ''
+    address: vendor.address || '',
+    bankDetails: {
+      accountTitle: vendor.bankDetails?.accountTitle || '',
+      accountNumber: vendor.bankDetails?.accountNumber || '',
+      bankName: vendor.bankDetails?.bankName || '',
+      branchCode: vendor.bankDetails?.branchCode || ''
+    },
+    mobileWallet: {
+      jazzCash: vendor.mobileWallet?.jazzCash || '',
+      easyPaisa: vendor.mobileWallet?.easyPaisa || '',
+      uPaisa: vendor.mobileWallet?.uPaisa || ''
+    }
   });
   const [loading, setLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Handle nested objects (bankDetails, mobileWallet)
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1050,13 +1076,24 @@ const VendorProfileTab = ({ vendor, onProfileUpdate }) => {
     }
   };
 
-  const handleCancel = () => {
+const handleCancel = () => {
     setFormData({
       name: vendor.name,
       email: vendor.email,
       company: vendor.company || '',
       phone: vendor.phone || '',
-      address: vendor.address || ''
+      address: vendor.address || '',
+      bankDetails: {
+        accountTitle: vendor.bankDetails?.accountTitle || '',
+        accountNumber: vendor.bankDetails?.accountNumber || '',
+        bankName: vendor.bankDetails?.bankName || '',
+        branchCode: vendor.bankDetails?.branchCode || ''
+      },
+      mobileWallet: {
+        jazzCash: vendor.mobileWallet?.jazzCash || '',
+        easyPaisa: vendor.mobileWallet?.easyPaisa || '',
+        uPaisa: vendor.mobileWallet?.uPaisa || ''
+      }
     });
     setIsEditing(false);
   };
@@ -1121,8 +1158,78 @@ const VendorProfileTab = ({ vendor, onProfileUpdate }) => {
               name="address"
               label="Address"
               value={formData.address}
-              onChange={handleInputChange}
+onChange={handleInputChange}
             />
+            {/* Payment Gateway Section */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <ApperIcon name="CreditCard" size={20} className="mr-2" />
+                Payment Gateway Information
+              </h3>
+              
+              {/* Bank Details */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-800 mb-3">Bank Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Account Title"
+                    name="bankDetails.accountTitle"
+                    value={formData.bankDetails.accountTitle}
+                    onChange={handleInputChange}
+                    placeholder="Enter account title"
+                  />
+                  <Input
+                    label="Account Number"
+                    name="bankDetails.accountNumber"
+                    value={formData.bankDetails.accountNumber}
+                    onChange={handleInputChange}
+                    placeholder="Enter account number"
+                  />
+                  <Input
+                    label="Bank Name"
+                    name="bankDetails.bankName"
+                    value={formData.bankDetails.bankName}
+                    onChange={handleInputChange}
+                    placeholder="Enter bank name"
+                  />
+                  <Input
+                    label="Branch Code"
+                    name="bankDetails.branchCode"
+                    value={formData.bankDetails.branchCode}
+                    onChange={handleInputChange}
+                    placeholder="Enter branch code"
+                  />
+                </div>
+              </div>
+
+              {/* Mobile Wallet */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-800 mb-3">Mobile Wallet Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input
+                    label="JazzCash"
+                    name="mobileWallet.jazzCash"
+                    value={formData.mobileWallet.jazzCash}
+                    onChange={handleInputChange}
+                    placeholder="03XXXXXXXXX"
+                  />
+                  <Input
+                    label="EasyPaisa"
+                    name="mobileWallet.easyPaisa"
+                    value={formData.mobileWallet.easyPaisa}
+                    onChange={handleInputChange}
+                    placeholder="03XXXXXXXXX"
+                  />
+                  <Input
+                    label="U Paisa"
+                    name="mobileWallet.uPaisa"
+                    value={formData.mobileWallet.uPaisa}
+                    onChange={handleInputChange}
+                    placeholder="03XXXXXXXXX"
+                  />
+                </div>
+              </div>
+            </div>
 
             <div className="flex space-x-3 pt-4">
               <Button
@@ -1179,6 +1286,71 @@ const VendorProfileTab = ({ vendor, onProfileUpdate }) => {
                 <p className="text-sm text-gray-900">{vendor.phone || 'Not specified'}</p>
               </div>
             </div>
+
+            {/* Payment Gateway Display Section */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <ApperIcon name="CreditCard" size={20} className="mr-2" />
+                Payment Gateway Information
+              </h3>
+              
+              {/* Bank Details Display */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-800 mb-3">Bank Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Account Title
+                    </label>
+                    <p className="text-sm text-gray-900">{vendor.bankDetails?.accountTitle || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Account Number
+                    </label>
+                    <p className="text-sm text-gray-900">{vendor.bankDetails?.accountNumber || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bank Name
+                    </label>
+                    <p className="text-sm text-gray-900">{vendor.bankDetails?.bankName || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Branch Code
+                    </label>
+                    <p className="text-sm text-gray-900">{vendor.bankDetails?.branchCode || 'Not specified'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Wallet Display */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-800 mb-3">Mobile Wallet Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      JazzCash
+                    </label>
+                    <p className="text-sm text-gray-900">{vendor.mobileWallet?.jazzCash || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      EasyPaisa
+                    </label>
+                    <p className="text-sm text-gray-900">{vendor.mobileWallet?.easyPaisa || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      U Paisa
+                    </label>
+                    <p className="text-sm text-gray-900">{vendor.mobileWallet?.uPaisa || 'Not specified'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1199,8 +1371,8 @@ const VendorProfileTab = ({ vendor, onProfileUpdate }) => {
                   >
                     {permission.replace('_', ' ')}
                   </span>
-                ))}
-</div>
+))}
+              </div>
             </div>
           </div>
         )}
@@ -1639,9 +1811,9 @@ const VendorPackingTab = ({ vendor }) => {
   const handleStartPacking = (order) => {
     setSelectedOrder(order);
     setPackingData({
-      orderId: order.id,
 items: order.items?.filter(item => (item.productId % 3 + 1) === vendor.Id).map(item => {
         const fieldConfig = productUnitService.getFieldConfig(item);
+        return {
         return {
           ...item,
           packedQuantity: item.quantity,
@@ -1654,7 +1826,6 @@ items: order.items?.filter(item => (item.productId % 3 + 1) === vendor.Id).map(i
       }) || []
     });
   };
-
 const handleItemVerification = (itemIndex, field, value) => {
     setPackingData(prev => ({
       ...prev,
@@ -1703,7 +1874,6 @@ const handleItemVerification = (itemIndex, field, value) => {
       reader.readAsDataURL(file);
     }
   };
-
 const handlePackingComplete = async () => {
     // Validate that all items are verified or properly skipped
     const invalidItems = packingData.items.filter(item => {
@@ -1867,8 +2037,8 @@ const handlePackingComplete = async () => {
               </h3>
             </div>
             
-            <div className="p-6 space-y-6">
-{/* Items Checklist */}
+<div className="p-6 space-y-6">
+              {/* Items Checklist */}
               <div>
                 <h4 className="font-medium text-gray-900 mb-3">Items Verification</h4>
                 <div className="space-y-4">
@@ -1967,8 +2137,9 @@ const handlePackingComplete = async () => {
                   ))}
                 </div>
               </div>
+</div>
               
-{/* Photo Capture - Optional */}
+              {/* Photo Capture - Optional */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-medium text-gray-900">
@@ -2073,8 +2244,8 @@ const handlePackingComplete = async () => {
                 variant="outline"
               >
                 Cancel
-              </Button>
-<Button
+</Button>
+              <Button
                 onClick={handlePackingComplete}
                 variant="primary"
                 disabled={!packingData.items?.every(item => item.verified)}

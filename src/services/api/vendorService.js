@@ -1,6 +1,4 @@
-import React from "react";
 import vendorsData from "@/services/mockData/vendors.json";
-import Error from "@/components/ui/Error";
 
 class VendorService {
   constructor() {
@@ -40,19 +38,29 @@ class VendorService {
     // Store session in localStorage
     localStorage.setItem('vendorSession', JSON.stringify(this.currentSession));
     
-    return {
+return {
       vendor: {
         Id: vendor.Id,
         name: vendor.name,
         email: vendor.email,
         company: vendor.company,
         phone: vendor.phone,
-        permissions: vendor.permissions || ['view_products', 'edit_prices']
+        permissions: vendor.permissions || ['view_products', 'edit_prices'],
+        bankDetails: vendor.bankDetails || {
+          accountTitle: '',
+          accountNumber: '',
+          bankName: '',
+          branchCode: ''
+        },
+        mobileWallet: vendor.mobileWallet || {
+          jazzCash: '',
+          easyPaisa: '',
+          uPaisa: ''
+        }
       },
       session: this.currentSession
     };
   }
-
   async logout() {
     await this.delay(200);
     
@@ -119,7 +127,7 @@ class VendorService {
       throw new Error('Vendor not found');
     }
     
-    return {
+return {
       Id: vendor.Id,
       name: vendor.name,
       email: vendor.email,
@@ -128,7 +136,18 @@ class VendorService {
       address: vendor.address,
       joinDate: vendor.joinDate,
       permissions: vendor.permissions || ['view_products', 'edit_prices'],
-      isActive: vendor.isActive
+      isActive: vendor.isActive,
+      bankDetails: vendor.bankDetails || {
+        accountTitle: '',
+        accountNumber: '',
+        bankName: '',
+        branchCode: ''
+      },
+      mobileWallet: vendor.mobileWallet || {
+        jazzCash: '',
+        easyPaisa: '',
+        uPaisa: ''
+      }
     };
   }
 
@@ -169,6 +188,20 @@ class VendorService {
       Id: this.vendors[vendorIndex].Id, // Preserve ID
       lastUpdated: new Date().toISOString()
     };
+// Import WebSocket service for real-time sync
+    try {
+      const { webSocketService } = await import('@/services/api/websocketService');
+      webSocketService.send({
+        type: 'vendor_profile_updated',
+        data: {
+          vendorId: vendorId,
+          updatedFields: Object.keys(profileData),
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.warn('WebSocket notification failed:', error);
+    }
     
     return {
       Id: this.vendors[vendorIndex].Id,
@@ -322,7 +355,7 @@ async update(id, vendorData) {
       lastUpdated: new Date().toISOString()
     };
     
-    return { ...this.vendors[vendorIndex] };
+return { ...this.vendors[vendorIndex] };
   }
 
   async delete(id) {

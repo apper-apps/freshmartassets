@@ -121,6 +121,7 @@ startMockMessages(mockWS) {
       'payment_proof_uploaded',
       'amount_auto_matched',
       'vendor_payment_confirmed',
+      'vendor_profile_updated',
       'system_notification',
       // Phase 1: Real-time Order Sync message types
       'order_created_immediate',
@@ -332,6 +333,17 @@ requestId: Math.floor(Math.random() * 10) + 1,
             timestamp: new Date().toISOString(),
             status: 'confirmed'
           }
+};
+
+      case 'vendor_profile_updated':
+        return {
+          ...baseMessage,
+          data: {
+            vendorId: Math.floor(Math.random() * 3) + 1,
+            updatedFields: ['bankDetails', 'mobileWallet'],
+            timestamp: new Date().toISOString(),
+            message: 'Vendor payment gateway information updated'
+          }
         };
 
       case 'approval_comment_added':
@@ -352,7 +364,6 @@ requestId: Math.floor(Math.random() * 10) + 1,
             severity: 'info'
           }
         };
-
       default:
         return baseMessage;
     }
@@ -702,8 +713,8 @@ for (const objKey in value) {
 if (typeof message !== 'object' || message === null) {
           // Test if primitive can be cloned (with fallback for environments without structuredClone)
           try {
-            if (typeof structuredClone !== 'undefined') {
-              structuredClone(message);
+            if (typeof globalThis !== 'undefined' && typeof globalThis.structuredClone === 'function') {
+              globalThis.structuredClone(message);
             } else {
               // Fallback for environments without structuredClone
               JSON.parse(JSON.stringify(message));
@@ -812,7 +823,7 @@ else if (value instanceof Error) {
             result = this.serializeErrorSafely(value);
           }
 // Handle File objects (common in forms) - with environment check
-          else if (typeof File !== 'undefined' && value instanceof File) {
+          else if (typeof globalThis !== 'undefined' && typeof globalThis.File === 'function' && value instanceof globalThis.File) {
             result = {
               __type: 'File',
               name: value.name,
@@ -821,8 +832,8 @@ else if (value instanceof Error) {
               lastModified: value.lastModified
             };
           }
-          // Handle Blob objects - with environment check
-          else if (typeof Blob !== 'undefined' && value instanceof Blob) {
+// Handle Blob objects - with environment check
+          else if (typeof globalThis !== 'undefined' && typeof globalThis.Blob === 'function' && value instanceof globalThis.Blob) {
             result = {
               __type: 'Blob',
               size: value.size,
@@ -870,7 +881,7 @@ else if (value instanceof Error) {
             };
 }
 // Handle Window objects - with proper environment checks
-          else if (typeof window !== 'undefined' && typeof Window !== 'undefined' && value instanceof Window) {
+          else if (typeof globalThis !== 'undefined' && typeof globalThis.Window === 'function' && value instanceof globalThis.Window) {
             result = {
               __type: 'Window',
               origin: value.origin,
@@ -919,8 +930,8 @@ for (const objKey in value) {
 else {
             // Handle primitive values with clone test (with fallback)
             try {
-              if (typeof structuredClone !== 'undefined') {
-                structuredClone(value);
+              if (typeof globalThis !== 'undefined' && typeof globalThis.structuredClone === 'function') {
+                globalThis.structuredClone(value);
               } else {
                 // Fallback for environments without structuredClone
                 JSON.parse(JSON.stringify(value));

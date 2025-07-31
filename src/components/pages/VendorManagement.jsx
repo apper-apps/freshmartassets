@@ -8,6 +8,7 @@ import Loading from '@/components/ui/Loading';
 import Error from '@/components/ui/Error';
 import { vendorService } from '@/services/api/vendorService';
 import { productService } from '@/services/api/productService';
+import { webSocketService } from '@/services/api/websocketService';
 import { paymentService } from '@/services/api/paymentService';
 import ProductAssignment from '@/components/molecules/ProductAssignment';
 
@@ -52,6 +53,20 @@ useEffect(() => {
     loadVendors();
     loadAvailableProducts();
     loadPaymentQueue();
+
+    // Subscribe to real-time vendor profile updates
+    const unsubscribe = webSocketService.subscribe('vendor_profile_updated', (data) => {
+      toast.info(`Vendor profile updated: ${data.vendorId}`, {
+        position: "top-right",
+        autoClose: 3000
+      });
+      // Reload vendors to reflect changes
+      loadVendors();
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const loadAvailableProducts = async () => {
