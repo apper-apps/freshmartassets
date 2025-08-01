@@ -169,9 +169,9 @@ const handleImageUpload = async (file) => {
       setImageData(prev => ({ ...prev, isProcessing: false }));
       toast.error('Failed to upload image. Please try again.');
     }
-  };
+};
 
-// Handle image search
+  // Handle image search - moved before usage to fix hoisting issue
   const handleImageSearch = async (searchQuery) => {
     try {
       setImageData(prev => ({ ...prev, isProcessing: true }));
@@ -197,7 +197,7 @@ const handleImageUpload = async (file) => {
     }
   };
 
-  // Handle AI image generation
+  // Handle AI image generation - moved before usage to fix hoisting issue
   const handleAIImageGenerate = async (prompt) => {
     try {
       setImageData(prev => ({ ...prev, isProcessing: true }));
@@ -621,8 +621,8 @@ return matchesSearch && matchesCategory;
           filteredProducts={filteredProducts}
           handleInputChange={handleInputChange}
           handleImageUpload={handleImageUpload}
-          handleImageSearch={handleImageSearch}
-handleImageSelect={handleImageSelect}
+handleImageSearch={handleImageSearch}
+          handleImageSelect={handleImageSelect}
           handleSubmit={handleSubmit}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
@@ -2444,7 +2444,7 @@ const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
 // Handle image selection from search results or AI generation
-const handleImageSelect = (imageUrl) => {
+  const handleLocalImageSelect = (imageUrl) => {
     try {
       if (!imageUrl) {
         toast.error('Invalid image URL');
@@ -2762,7 +2762,7 @@ const handleImageSelect = (imageUrl) => {
               type="button"
               variant="primary"
               icon="Search"
-              onClick={() => handleImageSearch(imageData.searchQuery || formData.name)}
+onClick={() => onImageSearch(imageData.searchQuery || formData.name)}
               disabled={imageData.isProcessing}
             >
               Search
@@ -2813,7 +2813,7 @@ const handleImageSelect = (imageUrl) => {
             type="button"
             variant="primary"
             icon="Sparkles"
-            onClick={() => handleAIImageGenerate(imageData.aiPrompt || `${formData.name} ${formData.category}`)}
+onClick={() => onAIImageGenerate(imageData.aiPrompt || `${formData.name} ${formData.category}`)}
             disabled={imageData.isProcessing}
             className="w-full"
           >
@@ -4119,76 +4119,6 @@ const AdminProductsTable = ({
   );
 };
 
-// Image search handler - moved outside component
-const handleImageSearchExternal = async (searchQuery, { setImageData, formData, productService, toast }) => {
-    if (!searchQuery?.trim()) {
-      toast.error('Please enter a search term');
-      return;
-    }
-
-    try {
-      setImageData(prev => ({ ...prev, isSearching: true, searchResults: [] }));
-      
-      const results = await productService.searchImages(searchQuery.trim(), {
-        category: formData.category,
-        limit: 12,
-        quality: 'high'
-      });
-
-      if (results?.length > 0) {
-        setImageData(prev => ({ 
-          ...prev, 
-          searchResults: results,
-          isSearching: false 
-        }));
-        toast.success(`Found ${results.length} images`);
-      } else {
-        setImageData(prev => ({ ...prev, isSearching: false, searchResults: [] }));
-        toast.info('No images found. Try different keywords.');
-      }
-    } catch (error) {
-      console.error('Image search failed:', error);
-      setImageData(prev => ({ ...prev, isSearching: false, searchResults: [] }));
-      toast.error('Image search failed. Please try again.');
-    }
-};
-
-// AI image generation handler - moved outside component  
-const handleAIImageGenerateExternal = async (prompt, { setImageData, formData, productService, toast }) => {
-  if (!prompt?.trim()) {
-      toast.error('Please enter a description for AI generation');
-      return;
-    }
-
-    try {
-      setImageData(prev => ({ ...prev, isGenerating: true }));
-      
-      const enhancedPrompt = `High-quality product photo: ${prompt.trim()}${formData.category ? `, ${formData.category} category` : ''}, professional lighting, white background, commercial photography style`;
-      
-      const generatedImage = await productService.generateAIImage(enhancedPrompt, {
-        style: 'commercial',
-        category: formData.category,
-        quality: 'high',
-        aspectRatio: '1:1'
-      });
-
-      if (generatedImage?.url) {
-        setImageData(prev => ({ 
-          ...prev, 
-          aiGenerated: generatedImage,
-          isGenerating: false 
-        }));
-        toast.success('AI image generated successfully!');
-      } else {
-        setImageData(prev => ({ ...prev, isGenerating: false }));
-        toast.error('Failed to generate image. Please try again.');
-      }
-    } catch (error) {
-      console.error('AI image generation failed:', error);
-      setImageData(prev => ({ ...prev, isGenerating: false }));
-      toast.error('AI generation failed. Please try a different description.');
-    }
-  };
 
 // Product Form Modal Component (extracted for reuse)
 const ProductFormModal = ({
