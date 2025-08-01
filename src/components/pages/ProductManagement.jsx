@@ -1674,11 +1674,11 @@ return matchesSearch && matchesCategory;
                   icon="Save"
                 >
                   {editingProduct ? "Update Product" : "Add Product"}
+{editingProduct ? "Update Product" : "Add Product"}
                 </Button>
               </div>
             </form>
           </div>
-        </div>
       )}
 
       {/* Bulk Price Update Modal */}
