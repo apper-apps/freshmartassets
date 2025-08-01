@@ -1667,15 +1667,15 @@ return matchesSearch && matchesCategory;
                 >
                   Cancel
                 </Button>
-                <Button
+<Button
                   type="submit"
                   variant="primary"
-icon="Save"
-            >
-{editingProduct ? "Update Product" : "Add Product"}
-            </Button>
-          </div>
-        </form>
+                  icon="Save"
+                >
+                  {editingProduct ? "Update Product" : "Add Product"}
+                </Button>
+              </div>
+            </form>
       </div>
     </div>
       )}
