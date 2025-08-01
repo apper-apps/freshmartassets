@@ -453,29 +453,45 @@ const priceChange = getPriceChange();
 <Button
                 variant="primary"
                 size="large"
-                icon="ShoppingCart"
+                icon={cartLoading ? "Loader2" : "ShoppingCart"}
                 onClick={handleAddToCart}
-                  loading={cartLoading}
-                  className="w-full"
-                >
-                  Add to Cart - {formatCurrency(calculateEffectivePrice(product, quantity) - calculateDealSavings(quantity))}
-                  {calculateDealSavings(quantity) > 0 && (
-                    <span className="text-xs block text-green-600 font-normal">
-                      Save {formatCurrency(calculateDealSavings(quantity))} with {activeDeal?.title}!
-                    </span>
-                  )}
-                </Button>
-                
-                <Button
-                  variant="secondary"
-                  size="large"
-                  icon="Zap"
-                  onClick={handleBuyNow}
-                  loading={cartLoading}
-                  className="w-full"
-                >
-                  Buy Now
-                </Button>
+                loading={cartLoading}
+                className="w-full relative overflow-hidden"
+              >
+                {cartLoading ? (
+                  <span className="flex items-center">
+                    <ApperIcon name="Loader2" size={20} className="animate-spin mr-2" />
+                    Processing...
+                  </span>
+                ) : (
+                  <>
+                    Add to Cart - {formatCurrency(calculateEffectivePrice(product, quantity) - calculateDealSavings(quantity))}
+                    {calculateDealSavings(quantity) > 0 && (
+                      <span className="text-xs block text-green-600 font-normal">
+                        Save {formatCurrency(calculateDealSavings(quantity))} with {activeDeal?.title}!
+                      </span>
+                    )}
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                variant="secondary"
+                size="large"
+                icon={cartLoading ? "Loader2" : "Zap"}
+                onClick={handleBuyNow}
+                loading={cartLoading}
+                className="w-full relative overflow-hidden"
+              >
+                {cartLoading ? (
+                  <span className="flex items-center">
+                    <ApperIcon name="Loader2" size={20} className="animate-spin mr-2" />
+                    Processing...
+                  </span>
+                ) : (
+                  "Buy Now"
+                )}
+              </Button>
               </>
             ) : (
               <Button

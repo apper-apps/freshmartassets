@@ -82,19 +82,37 @@ async getById(id, userRole = 'customer') {
     }
   }
 
-  async create(productData) {
+async create(productData) {
     await this.delay();
+    
+    // Check for draft recovery
+    const draftId = productData.draftId;
+    if (draftId) {
+      this.clearDraft(draftId);
+    }
+    
     // Validate required fields
     if (!productData.name || !productData.price || productData.stock === undefined) {
-      throw new Error('Name, price, and stock are required fields');
+      // Save as draft for incomplete submissions
+      const draft = await this.saveDraft(productData);
+      const error = new Error('Name, price, and stock are required fields');
+      error.draftId = draft.id;
+      throw error;
     }
+    
     // Validate data types and constraints
     if (productData.price <= 0) {
-      throw new Error('Price must be greater than 0');
+      const draft = await this.saveDraft(productData);
+      const error = new Error('Price must be greater than 0');
+      error.draftId = draft.id;
+      throw error;
     }
 
     if (productData.stock < 0) {
-      throw new Error('Stock cannot be negative');
+      const draft = await this.saveDraft(productData);
+      const error = new Error('Stock cannot be negative');
+      error.draftId = draft.id;
+      throw error;
     }
 
     const newProduct = {
@@ -107,11 +125,54 @@ async getById(id, userRole = 'customer') {
       profitMargin: parseFloat(productData.profitMargin) || 0,
       stock: parseInt(productData.stock),
       minStock: productData.minStock ? parseInt(productData.minStock) : 10,
-      isActive: productData.isActive !== undefined ? productData.isActive : true
+      isActive: productData.isActive !== undefined ? productData.isActive : true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     this.products.push(newProduct);
     return { ...newProduct };
+  }
+
+  // Draft saving functionality
+  async saveDraft(productData) {
+    const drafts = this.getDrafts();
+    const draftId = `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const draft = {
+      id: draftId,
+      ...productData,
+      savedAt: new Date().toISOString(),
+      type: 'product'
+    };
+    
+    drafts[draftId] = draft;
+    localStorage.setItem('product_drafts', JSON.stringify(drafts));
+    return draft;
+  }
+
+  getDrafts() {
+    try {
+      return JSON.parse(localStorage.getItem('product_drafts')) || {};
+    } catch {
+      return {};
+    }
+  }
+
+  async loadDraft(draftId) {
+    const drafts = this.getDrafts();
+    return drafts[draftId] || null;
+  }
+
+  clearDraft(draftId) {
+    const drafts = this.getDrafts();
+    delete drafts[draftId];
+    localStorage.setItem('product_drafts', JSON.stringify(drafts));
+  }
+
+  getAllDrafts() {
+    const drafts = this.getDrafts();
+    return Object.values(drafts).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
   }
 
   async update(id, productData) {
@@ -654,8 +715,9 @@ async processImage(file, options = {}) {
     try {
       const {
         targetSize = { width: 600, height: 600 },
-        maxFileSize = 5 * 1024 * 1024, // Increased to 5MB
-        quality = 0.85
+        maxFileSize = 5 * 1024 * 1024, // 5MB limit
+        quality = 0.95, // Enhanced quality to 95% as per server-side standards
+        enforceSquare = true // Auto-crop to 1:1 ratio
       } = options;
       
       return new Promise((resolve, reject) => {
@@ -672,42 +734,90 @@ async processImage(file, options = {}) {
         
         img.onload = () => {
           try {
-            // Calculate dimensions maintaining aspect ratio
-            let { width, height } = this.calculateOptimalDimensions(
-              img.width, 
-              img.height, 
-              targetSize.width, 
-              targetSize.height
-            );
+            let { width, height } = targetSize;
             
-            canvas.width = width;
-            canvas.height = height;
+            // Auto-crop to 1:1 ratio (square) similar to server-side processing
+            if (enforceSquare) {
+              const cropSize = Math.min(img.width, img.height);
+              const left = (img.width - cropSize) / 2;
+              const top = (img.height - cropSize) / 2;
+              
+              // Create temporary canvas for cropping
+              const tempCanvas = document.createElement('canvas');
+              const tempCtx = tempCanvas.getContext('2d');
+              tempCanvas.width = cropSize;
+              tempCanvas.height = cropSize;
+              
+              // Draw cropped image
+              tempCtx.drawImage(img, left, top, cropSize, cropSize, 0, 0, cropSize, cropSize);
+              
+              // Set final dimensions
+              canvas.width = width;
+              canvas.height = height;
+              
+              // Use LANCZOS-like quality for resizing (high-quality interpolation)
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              
+              // Draw with white background for consistency
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+              
+              // Draw the cropped and resized image
+              ctx.drawImage(tempCanvas, 0, 0, width, height);
+            } else {
+              // Standard processing without enforced square crop
+              const dimensions = this.calculateOptimalDimensions(
+                img.width, 
+                img.height, 
+                targetSize.width, 
+                targetSize.height
+              );
+              
+              canvas.width = dimensions.width;
+              canvas.height = dimensions.height;
+              
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+              ctx.drawImage(img, 0, 0, dimensions.width, dimensions.height);
+            }
             
-            // Draw image with white background
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            // Single conversion attempt - no complex retry logic
+            // Convert to WebP with high quality (95% to match server standards)
             canvas.toBlob((blob) => {
               if (!blob) {
                 cleanup();
-                reject(new Error('Failed to create blob from canvas'));
+                reject(new Error('Failed to create optimized image blob'));
+                return;
+              }
+
+              // Validate file size
+              if (blob.size > maxFileSize) {
+                cleanup();
+                reject(new Error(`Processed image too large: ${Math.round(blob.size / 1024 / 1024)}MB (max: ${Math.round(maxFileSize / 1024 / 1024)}MB)`));
                 return;
               }
 
               try {
                 const outputUrl = URL.createObjectURL(blob);
                 cleanup();
-                resolve({ url: outputUrl, blob, size: blob.size });
+                resolve({ 
+                  url: outputUrl, 
+                  blob, 
+                  size: blob.size,
+                  dimensions: { width: canvas.width, height: canvas.height },
+                  format: 'webp',
+                  quality: quality
+                });
               } catch (error) {
                 cleanup();
-                reject(new Error('Failed to create output URL'));
+                reject(new Error('Failed to create optimized image URL'));
               }
             }, 'image/webp', quality);
           } catch (error) {
             cleanup();
-            reject(new Error(`Failed to process image: ${error.message}`));
+            reject(new Error(`Image processing failed: ${error.message}`));
           }
         };
         
@@ -730,7 +840,7 @@ async processImage(file, options = {}) {
         URL.revokeObjectURL(inputObjectUrl);
       }
       console.error('Error processing image:', error);
-      throw new Error('Failed to process image');
+      throw new Error('Image processing failed - please try again');
     }
   }
 
