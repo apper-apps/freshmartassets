@@ -495,11 +495,9 @@ const handleSubmit = async (e) => {
       if (validationErrors.length > 0) {
         const errorMessage = validationErrors.join(", ");
         logSubmissionAttempt(false, `Validation failed: ${errorMessage}`);
-        toast.error(errorMessage);
+toast.error(errorMessage);
         return;
       }
-      }
-
       // Enhanced business rules validation with price guards
       const purchasePrice = parseFloat(formData.purchasePrice) || 0;
       const price = parseFloat(formData.price) || 0;
