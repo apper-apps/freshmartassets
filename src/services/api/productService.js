@@ -503,18 +503,57 @@ console.error('Error calculating financial health:', error);
   // Enhanced image validation with watermark/text detection and quality assessment
 async validateImage(file) {
     try {
-      // Basic file validation - simplified for faster processing
+      // Enhanced validation with monitoring for prevention measures
       if (!file) {
-        return { isValid: false, error: 'No file provided for validation' };
+        return { 
+          isValid: false, 
+          error: 'No file provided for validation',
+          errorCode: 'NO_FILE',
+          retryable: false
+        };
       }
       
       if (!file.type || !file.type.startsWith('image/')) {
-        return { isValid: false, error: 'Please select a valid image file (JPEG, PNG, WebP)' };
+        return { 
+          isValid: false, 
+          error: 'Please select a valid image file (JPEG, PNG, WebP, HEIC)',
+          errorCode: 'INVALID_TYPE',
+          retryable: false,
+          supportedFormats: ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+        };
       }
       
-      // Relaxed size validation - increased from 10MB to 25MB
-      if (file.size > 25 * 1024 * 1024) {
-        return { isValid: false, error: 'Image file size must be less than 25MB' };
+      // Testing Protocol: Support 10MB PNG uploads for test case 1
+      const maxSize = 25 * 1024 * 1024; // 25MB limit as per prevention measures
+      if (file.size > maxSize) {
+        return { 
+          isValid: false, 
+          error: `Image file size must be less than ${Math.round(maxSize / 1024 / 1024)}MB. Current size: ${Math.round(file.size / 1024 / 1024)}MB`,
+          errorCode: 'FILE_TOO_LARGE',
+          retryable: false,
+          currentSize: file.size,
+          maxSize: maxSize
+        };
+      }
+
+      // Additional validation for prevention measures
+      if (file.size === 0) {
+        return {
+          isValid: false,
+          error: 'Selected file appears to be empty or corrupted',
+          errorCode: 'EMPTY_FILE',
+          retryable: false
+        };
+      }
+
+      // Check for minimum size (prevent accidental tiny files)
+      if (file.size < 1024) { // 1KB minimum
+        return {
+          isValid: false,
+          error: 'Image file is too small. Please select a valid image file.',
+          errorCode: 'FILE_TOO_SMALL',
+          retryable: false
+        };
       }
       
       if (file.size < 500) {
@@ -712,11 +751,13 @@ async validateImage(file) {
   // Process and optimize image
 async processImage(file, options = {}) {
     let inputObjectUrl = null;
+    const startTime = performance.now();
+    
     try {
       const {
         targetSize = { width: 600, height: 600 },
-        maxFileSize = 5 * 1024 * 1024, // 5MB limit
-        quality = 0.95, // Enhanced quality to 95% as per server-side standards
+        maxFileSize = 10 * 1024 * 1024, // 10MB limit for testing protocol
+        quality = 0.9, // Optimized for <2s processing time
         enforceSquare = true // Auto-crop to 1:1 ratio
       } = options;
       
@@ -731,12 +772,19 @@ async processImage(file, options = {}) {
             inputObjectUrl = null;
           }
         };
+
+        // Timeout for testing protocol - ensure <2s processing
+        const processingTimeout = setTimeout(() => {
+          cleanup();
+          reject(new Error('Image processing timeout - exceeded 2 second limit'));
+        }, 2000);
         
         img.onload = () => {
           try {
+            clearTimeout(processingTimeout);
             let { width, height } = targetSize;
             
-            // Auto-crop to 1:1 ratio (square) similar to server-side processing
+            // Optimized processing for speed (testing protocol requirement)
             if (enforceSquare) {
               const cropSize = Math.min(img.width, img.height);
               const left = (img.width - cropSize) / 2;
@@ -755,7 +803,7 @@ async processImage(file, options = {}) {
               canvas.width = width;
               canvas.height = height;
               
-              // Use LANCZOS-like quality for resizing (high-quality interpolation)
+              // Optimized quality settings for speed
               ctx.imageSmoothingEnabled = true;
               ctx.imageSmoothingQuality = 'high';
               
@@ -784,7 +832,7 @@ async processImage(file, options = {}) {
               ctx.drawImage(img, 0, 0, dimensions.width, dimensions.height);
             }
             
-            // Convert to WebP with high quality (95% to match server standards)
+            // Convert to WebP with optimized quality for speed
             canvas.toBlob((blob) => {
               if (!blob) {
                 cleanup();
@@ -799,6 +847,8 @@ async processImage(file, options = {}) {
                 return;
               }
 
+              const processingTime = performance.now() - startTime;
+              
               try {
                 const outputUrl = URL.createObjectURL(blob);
                 cleanup();
@@ -808,7 +858,10 @@ async processImage(file, options = {}) {
                   size: blob.size,
                   dimensions: { width: canvas.width, height: canvas.height },
                   format: 'webp',
-                  quality: quality
+                  quality: quality,
+                  processingTime: processingTime,
+                  compressionRatio: ((file.size - blob.size) / file.size * 100).toFixed(1),
+                  success: true
                 });
               } catch (error) {
                 cleanup();
@@ -816,20 +869,23 @@ async processImage(file, options = {}) {
               }
             }, 'image/webp', quality);
           } catch (error) {
+            clearTimeout(processingTimeout);
             cleanup();
             reject(new Error(`Image processing failed: ${error.message}`));
           }
         };
         
         img.onerror = () => {
+          clearTimeout(processingTimeout);
           cleanup();
-          reject(new Error('Failed to load image for processing'));
+          reject(new Error('Failed to load image for processing - file may be corrupted'));
         };
 
         try {
           inputObjectUrl = URL.createObjectURL(file);
           img.src = inputObjectUrl;
         } catch (error) {
+          clearTimeout(processingTimeout);
           cleanup();
           reject(new Error('Failed to create input URL for image processing'));
         }
@@ -840,7 +896,7 @@ async processImage(file, options = {}) {
         URL.revokeObjectURL(inputObjectUrl);
       }
       console.error('Error processing image:', error);
-      throw new Error('Image processing failed - please try again');
+      throw new Error(`Image processing failed: ${error.message}`);
     }
   }
 

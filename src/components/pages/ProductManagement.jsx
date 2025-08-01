@@ -52,7 +52,142 @@ const ProductManagement = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showBulkPriceModal, setShowBulkPriceModal] = useState(false);
   const [pendingVisibilityToggles, setPendingVisibilityToggles] = useState(new Set());
+// Enhanced monitoring and alert system
+  const [monitoringData, setMonitoringData] = useState({
+    submissionAttempts: 0,
+    failedSubmissions: 0,
+    lastFailureTime: null,
+    hourlyFailures: [],
+    alertsSent: 0
+  });
+
+  const [emergencyMode, setEmergencyMode] = useState(false);
   
+  // Load monitoring data from localStorage
+  useEffect(() => {
+    const savedMonitoring = localStorage.getItem('productSubmissionMonitoring');
+    if (savedMonitoring) {
+      try {
+        const parsed = JSON.parse(savedMonitoring);
+        setMonitoringData(parsed);
+      } catch (error) {
+        console.error('Failed to load monitoring data:', error);
+      }
+    }
+  }, []);
+
+  // Save monitoring data to localStorage
+  const saveMonitoringData = (data) => {
+    try {
+      localStorage.setItem('productSubmissionMonitoring', JSON.stringify(data));
+      setMonitoringData(data);
+    } catch (error) {
+      console.error('Failed to save monitoring data:', error);
+    }
+  };
+
+  // Log submission attempt
+  const logSubmissionAttempt = (success, errorDetails = null) => {
+    const now = Date.now();
+    const currentHour = Math.floor(now / (1000 * 60 * 60));
+    
+    setMonitoringData(prev => {
+      const newData = {
+        ...prev,
+        submissionAttempts: prev.submissionAttempts + 1,
+        failedSubmissions: success ? prev.failedSubmissions : prev.failedSubmissions + 1,
+        lastFailureTime: success ? prev.lastFailureTime : now
+      };
+
+      // Track hourly failures
+      if (!success) {
+        const hourlyFailures = [...prev.hourlyFailures];
+        const existingHour = hourlyFailures.find(h => h.hour === currentHour);
+        
+        if (existingHour) {
+          existingHour.count += 1;
+          existingHour.errors.push({
+            timestamp: now,
+            error: errorDetails || 'Unknown error',
+            userAgent: navigator.userAgent
+          });
+        } else {
+          hourlyFailures.push({
+            hour: currentHour,
+            count: 1,
+            errors: [{
+              timestamp: now,
+              error: errorDetails || 'Unknown error',
+              userAgent: navigator.userAgent
+            }]
+          });
+        }
+
+        // Keep only last 24 hours
+        newData.hourlyFailures = hourlyFailures.filter(h => h.hour > currentHour - 24);
+      }
+
+      // Check if alert should be sent
+      const currentHourFailures = newData.hourlyFailures.find(h => h.hour === currentHour);
+      if (currentHourFailures && currentHourFailures.count >= 5 && !success) {
+        sendAdminAlert(currentHourFailures);
+      }
+
+      saveMonitoringData(newData);
+      return newData;
+    });
+  };
+
+  // Send admin alert
+  const sendAdminAlert = async (hourlyData) => {
+    if (monitoringData.alertsSent >= 3) {
+      console.log('Alert limit reached for current session');
+      return;
+    }
+
+    try {
+      const alertData = {
+        type: 'PRODUCT_SUBMISSION_FAILURE',
+        severity: 'HIGH',
+        message: `High failure rate detected: ${hourlyData.count} failed product submissions in the last hour`,
+        details: {
+          failureCount: hourlyData.count,
+          timeFrame: 'Last Hour',
+          errors: hourlyData.errors.slice(-3), // Last 3 errors
+          totalAttempts: monitoringData.submissionAttempts,
+          totalFailures: monitoringData.failedSubmissions,
+          failureRate: ((monitoringData.failedSubmissions / monitoringData.submissionAttempts) * 100).toFixed(2) + '%'
+        },
+        timestamp: new Date().toISOString(),
+        actionRequired: true,
+        recommendations: [
+          'Check server connectivity and image processing services',
+          'Review recent product submissions for patterns',
+          'Consider enabling emergency mode for critical operations',
+          'Monitor system resources and error logs'
+        ]
+      };
+
+      // In a real implementation, this would send to your notification service
+      console.warn('ADMIN ALERT:', alertData);
+      
+      // Simulate notification service call
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      toast.error(`Admin Alert: High failure rate detected (${hourlyData.count} failures/hour)`, {
+        autoClose: 8000,
+        className: 'bg-red-600 text-white'
+      });
+
+      setMonitoringData(prev => ({
+        ...prev,
+        alertsSent: prev.alertsSent + 1
+      }));
+
+    } catch (error) {
+      console.error('Failed to send admin alert:', error);
+    }
+  };
   // Preview Mode State
   const [previewMode, setPreviewMode] = useState(false);
   const [previewDevice, setPreviewDevice] = useState('desktop'); // desktop, mobile
@@ -148,26 +283,87 @@ const [imageData, setImageData] = useState({
 
   // Handle image upload and processing
 const handleImageUpload = async (file) => {
+    const startTime = performance.now();
+    
     try {
       setImageData(prev => ({ ...prev, isProcessing: true }));
       
-      // Create image URL for immediate preview
-      const imageUrl = URL.createObjectURL(file);
+      // Enhanced validation for 10MB+ files
+      const validation = await productService.validateImage(file);
+      if (!validation.isValid) {
+        logSubmissionAttempt(false, `Image validation failed: ${validation.error}`);
+        toast.error(validation.error);
+        setImageData(prev => ({ ...prev, isProcessing: false }));
+        return;
+      }
+
+      // Process image with performance monitoring
+      let processedImage;
+      try {
+        processedImage = await productService.processImage(file, {
+          targetSize: { width: 600, height: 600 },
+          maxFileSize: 10 * 1024 * 1024, // 10MB limit
+          quality: 0.9,
+          enforceSquare: true
+        });
+      } catch (processingError) {
+        console.error('Image processing failed:', processingError);
+        logSubmissionAttempt(false, `Image processing failed: ${processingError.message}`);
+        
+        // Fallback: use original file if processing fails
+        const imageUrl = URL.createObjectURL(file);
+        setImageData(prev => ({
+          ...prev,
+          selectedImage: imageUrl,
+          croppedImage: imageUrl,
+          isProcessing: false
+        }));
+        setFormData(prev => ({ ...prev, imageUrl }));
+        toast.warning('Image uploaded without optimization. Quality may be reduced.');
+        return;
+      }
       
+      // Check processing time
+      const processingTime = performance.now() - startTime;
+      if (processingTime > 2000) { // 2 second threshold
+        console.warn(`Image processing took ${processingTime.toFixed(0)}ms (>2s threshold)`);
+      }
+
       setImageData(prev => ({
         ...prev,
-        selectedImage: imageUrl,
-        croppedImage: imageUrl,
-        isProcessing: false
+        selectedImage: processedImage.url,
+        croppedImage: processedImage.url,
+        isProcessing: false,
+        processingMetrics: {
+          originalSize: file.size,
+          processedSize: processedImage.size,
+          processingTime,
+          compressionRatio: ((file.size - processedImage.size) / file.size * 100).toFixed(1)
+        }
       }));
       
-      setFormData(prev => ({ ...prev, imageUrl }));
-      toast.success('✓ Image uploaded and ready!');
+      setFormData(prev => ({ ...prev, imageUrl: processedImage.url }));
+      
+      const compressionInfo = processedImage.size < file.size 
+        ? ` (${((file.size - processedImage.size) / file.size * 100).toFixed(1)}% smaller)`
+        : '';
+      
+      toast.success(`✓ Image processed successfully in ${processingTime.toFixed(0)}ms${compressionInfo}`);
+      logSubmissionAttempt(true);
       
     } catch (error) {
       console.error('Error uploading image:', error);
+      logSubmissionAttempt(false, error.message);
       setImageData(prev => ({ ...prev, isProcessing: false }));
-      toast.error('Failed to upload image. Please try again.');
+      
+      // Enhanced error messaging
+      if (error.message.includes('network')) {
+        toast.error('Network error during image upload. Please check your connection and try again.');
+      } else if (error.message.includes('timeout')) {
+        toast.error('Image upload timed out. Try a smaller image or check your connection.');
+      } else {
+        toast.error(`Failed to upload image: ${error.message}`);
+      }
     }
 };
 
@@ -267,29 +463,41 @@ const handleImageUpload = async (file) => {
 
   // Form submission with comprehensive validation
 // Form submission with comprehensive validation including offer conflicts and price guards
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
+    const submissionStartTime = performance.now();
     
     try {
-      // Validate required fields
+      // Enhanced validation with monitoring
+      const validationErrors = [];
+      
       if (!formData.name?.trim()) {
-        toast.error("Product name is required");
-        return;
+        validationErrors.push("Product name is required");
       }
       
       if (!formData.price || parseFloat(formData.price) <= 0) {
-        toast.error("Valid price is required");
-        return;
+        validationErrors.push("Valid price is required");
       }
       
       if (!formData.category) {
-        toast.error("Category is required");
-        return;
+        validationErrors.push("Category is required");
       }
       
       if (!formData.stock || parseInt(formData.stock) < 0) {
-        toast.error("Valid stock quantity is required");
+        validationErrors.push("Valid stock quantity is required");
+      }
+
+      // Image validation (unless in emergency mode)
+      if (!emergencyMode && !formData.imageUrl) {
+        validationErrors.push("Product image is required (or use Emergency Mode)");
+      }
+
+      if (validationErrors.length > 0) {
+        const errorMessage = validationErrors.join(", ");
+        logSubmissionAttempt(false, `Validation failed: ${errorMessage}`);
+        toast.error(errorMessage);
         return;
+      }
       }
 
       // Enhanced business rules validation with price guards
@@ -344,7 +552,7 @@ const handleImageUpload = async (file) => {
       // Prepare product data with proper validation
       const productData = {
         ...formData,
-        price: parseFloat(formData.price) || 0,
+price: parseFloat(formData.price) || 0,
         previousPrice: formData.previousPrice ? parseFloat(formData.previousPrice) : null,
         purchasePrice: parseFloat(formData.purchasePrice) || 0,
         discountValue: parseFloat(formData.discountValue) || 0,
@@ -352,8 +560,15 @@ const handleImageUpload = async (file) => {
         profitMargin: parseFloat(formData.profitMargin) || 0,
         stock: parseInt(formData.stock) || 0,
         minStock: formData.minStock ? parseInt(formData.minStock) : 5,
-        imageUrl: formData.imageUrl || "/api/placeholder/300/200",
-        barcode: formData.barcode || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        imageUrl: emergencyMode ? "/api/placeholder/300/200" : (formData.imageUrl || "/api/placeholder/300/200"),
+        barcode: formData.barcode || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        // Add monitoring metadata
+        submissionMetadata: {
+          emergencyMode,
+          processingTime: imageData.processingMetrics?.processingTime || 0,
+          submissionTime: submissionStartTime,
+          userAgent: navigator.userAgent.substring(0, 100)
+        }
       };
 
 // Validate offer conflicts before saving
@@ -375,6 +590,12 @@ const handleImageUpload = async (file) => {
         }
         
         return;
+}
+
+      // Performance monitoring
+      const submissionTime = performance.now() - submissionStartTime;
+      if (submissionTime > 2000) {
+        console.warn(`Product submission took ${submissionTime.toFixed(0)}ms (>2s threshold)`);
       }
 
       let result;
@@ -383,11 +604,16 @@ const handleImageUpload = async (file) => {
         toast.success("Product updated successfully!");
       } else {
         result = await productService.create(productData);
-        toast.success("Product created successfully!");
+const successMessage = emergencyMode 
+          ? "Product created successfully (Emergency Mode - no image)" 
+          : "Product created successfully!";
+        toast.success(successMessage);
+        logSubmissionAttempt(true);
       }
 
       // Reset form and reload products
       resetForm();
+      setEmergencyMode(false);
       await loadProducts();
       
       // Update preview if enabled
@@ -397,16 +623,18 @@ const handleImageUpload = async (file) => {
       }
       
 } catch (err) {
-      console.error("Error saving product:", err);
+console.error("Error saving product:", err);
+      logSubmissionAttempt(false, err.message);
       toast.error(err.message || "Failed to save product");
     }
   };
 
   // Handle product editing
-  const handleEdit = (product) => {
+const handleEdit = (product) => {
     if (!product) return;
     setEditingProduct(product);
-setFormData({
+    setEmergencyMode(false); // Reset emergency mode when editing
+    setFormData({
       name: product.name || "",
       price: product.price?.toString() || "",
       previousPrice: product.previousPrice?.toString() || "",
@@ -510,8 +738,8 @@ setFormData({
   };
 
   // Reset form state
-  const resetForm = () => {
-setFormData({
+const resetForm = () => {
+    setFormData({
       name: "",
       price: "",
       previousPrice: "",
@@ -535,15 +763,32 @@ setFormData({
       discountPriority: 1
     });
     
-// Reset image data
+    // Reset image data
     setImageData({
       selectedImage: null,
       croppedImage: null,
-      isProcessing: false
+      isProcessing: false,
+      processingMetrics: null
     });
     
     setEditingProduct(null);
     setShowAddForm(false);
+    setEmergencyMode(false);
+  };
+
+  // Emergency mode toggle
+  const toggleEmergencyMode = () => {
+    setEmergencyMode(prev => {
+      const newMode = !prev;
+      if (newMode) {
+        toast.warning('Emergency Mode Enabled: Products can be created without images', {
+          autoClose: 5000
+        });
+      } else {
+        toast.info('Emergency Mode Disabled: Image upload required');
+      }
+      return newMode;
+    });
   };
 
   // Handle bulk price update
@@ -873,20 +1118,91 @@ handleImageSearch={handleImageSearch}
       {/* Add/Edit Product Modal */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+<div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  {editingProduct ? "Edit Product" : "Add New Product"}
-                </h2>
-                <button
-                  onClick={resetForm}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <ApperIcon name="X" size={24} />
-                </button>
+                <div className="flex items-center space-x-3">
+                  <h2 className="text-2xl font-semibold text-gray-900">
+                    {editingProduct ? "Edit Product" : "Add New Product"}
+                  </h2>
+                  {emergencyMode && (
+                    <Badge variant="warning" className="text-xs font-bold animate-pulse">
+                      EMERGENCY MODE
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  {/* Emergency Mode Toggle */}
+                  <Button
+                    type="button"
+                    variant={emergencyMode ? "warning" : "ghost"}
+                    size="sm"
+                    icon={emergencyMode ? "AlertTriangle" : "Shield"}
+                    onClick={toggleEmergencyMode}
+                    className={`${emergencyMode ? 'bg-red-100 text-red-700 border-red-200' : 'text-gray-500'} transition-all duration-200`}
+                  >
+                    {emergencyMode ? "Emergency Mode ON" : "Emergency Mode"}
+                  </Button>
+                  <button
+                    onClick={resetForm}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <ApperIcon name="X" size={24} />
+                  </button>
+                </div>
               </div>
-</div>
+
+              {/* Monitoring Status Bar */}
+              {monitoringData.submissionAttempts > 0 && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <ApperIcon name="BarChart3" size={16} className="text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">
+                        Submission Monitor
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-blue-700">
+                      <span>Attempts: {monitoringData.submissionAttempts}</span>
+                      <span>Success Rate: {monitoringData.submissionAttempts > 0 ? 
+                        (((monitoringData.submissionAttempts - monitoringData.failedSubmissions) / monitoringData.submissionAttempts * 100).toFixed(1)) : 100}%</span>
+                      {monitoringData.failedSubmissions > 0 && (
+                        <span className="text-red-600 font-medium">
+                          Failures: {monitoringData.failedSubmissions}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Emergency Mode Warning */}
+              {emergencyMode && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <ApperIcon name="AlertTriangle" size={20} className="text-red-600 mt-0.5" />
+                    <div>
+                      <h4 className="text-red-800 font-medium">Emergency Mode Active</h4>
+                      <p className="text-red-700 text-sm mt-1">
+                        Products can be created without images. This should only be used during critical situations 
+                        when image upload is consistently failing.
+                      </p>
+                      <div className="mt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEmergencyMode(false)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Disable Emergency Mode
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="p-6 space-y-8">
               {/* 1. Basic Info Section */}
@@ -1096,7 +1412,7 @@ handleImageSearch={handleImageSearch}
                 )}
               </div>
 
-{/* 4. Enhanced Variations Section */}
+              {/* 4. Enhanced Variations Section */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2 pb-4 border-b border-gray-200">
                   <ApperIcon name="Settings" size={20} className="text-primary" />
@@ -1305,7 +1621,7 @@ handleImageSearch={handleImageSearch}
                 )}
               </div>
 
-{/* 5. Enhanced Offers & Discounts Management */}
+              {/* 5. Enhanced Offers & Discounts Management */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2 pb-4 border-b border-gray-200">
                   <ApperIcon name="Tag" size={20} className="text-primary" />
@@ -1619,16 +1935,33 @@ handleImageSearch={handleImageSearch}
                   icon="FileText"
                 />
 
-                {/* Image Upload System */}
-                <ImageUploadSystem
-                  imageData={imageData}
-                  setImageData={setImageData}
-                  onImageUpload={handleImageUpload}
-                  onImageSearch={handleImageSearch}
-                  onImageSelect={handleImageSelect}
-                  onAIImageGenerate={handleAIImageGenerate}
-                  formData={formData}
-                />
+                {/* Conditional Image Upload System */}
+                {!emergencyMode && (
+                  <ImageUploadSystem
+                    imageData={imageData}
+                    setImageData={setImageData}
+                    onImageUpload={handleImageUpload}
+                    onImageSearch={handleImageSearch}
+                    onImageSelect={handleImageSelect}
+                    onAIImageGenerate={handleAIImageGenerate}
+                    formData={formData}
+                  />
+                )}
+
+                {/* Emergency Mode Image Placeholder */}
+                {emergencyMode && (
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <div className="flex items-center space-x-3">
+                      <ApperIcon name="ImageOff" size={20} className="text-yellow-600" />
+                      <div>
+                        <h4 className="font-medium text-yellow-800">No Image Required (Emergency Mode)</h4>
+                        <p className="text-yellow-700 text-sm">
+                          Product will be created with default placeholder image. You can add an image later.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <Input
                   label="Barcode"
@@ -1652,9 +1985,10 @@ handleImageSearch={handleImageSearch}
                   type="submit"
                   variant="primary"
                   icon="Save"
+                  className={emergencyMode ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
                 >
-                  {editingProduct ? "Update Product" : "Add Product"}
-</Button>
+                  {editingProduct ? "Update Product" : (emergencyMode ? "Add Product (No Image)" : "Add Product")}
+                </Button>
               </div>
             </div>
           </div>
@@ -1662,14 +1996,14 @@ handleImageSearch={handleImageSearch}
       )}
 
       {/* Bulk Price Update Modal */}
-{/* Enhanced Bulk Actions Modal */}
+      {/* Enhanced Bulk Actions Modal */}
       {showBulkPriceModal && (
         <EnhancedBulkActionsModal
           products={products}
           categories={categories}
           onUpdate={handleBulkPriceUpdate}
           onClose={() => setShowBulkPriceModal(false)}
-/>
+        />
       )}
       </div>
       )}

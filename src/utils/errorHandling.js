@@ -3,6 +3,10 @@ export class ErrorHandler {
   static classifyError(error) {
     const message = error.message?.toLowerCase() || '';
     
+    // Image processing specific error classification
+    if (message.includes('image') || message.includes('processing') || message.includes('upload')) {
+      return 'image-processing';
+    }
     if (message.includes('network') || message.includes('fetch') || message.includes('connection')) {
       return 'network';
     }
@@ -32,6 +36,24 @@ static createUserFriendlyMessage(error, context = '') {
     // Enhanced wallet payment error handling
     if (error.code === 'WALLET_PAYMENT_FAILED' && error.userGuidance) {
       return `${contextPrefix}${error.userGuidance}`;
+    }
+
+    // Enhanced image processing error handling for prevention measures
+    if (type === 'image-processing' || context?.toLowerCase().includes('image')) {
+      switch (true) {
+        case error.message?.includes('timeout'):
+          return `${contextPrefix}Image processing took too long. Try using a smaller image or check your connection.`;
+        case error.message?.includes('too large'):
+          return `${contextPrefix}Image file is too large. Please use an image smaller than 25MB or enable Emergency Mode.`;
+        case error.message?.includes('corrupted'):
+          return `${contextPrefix}Image file appears to be corrupted. Please try a different image.`;
+        case error.message?.includes('format') || error.message?.includes('type'):
+          return `${contextPrefix}Unsupported image format. Please use JPEG, PNG, WebP, or HEIC files.`;
+        case error.message?.includes('network'):
+          return `${contextPrefix}Network error during image upload. Check your connection and try again, or use Emergency Mode.`;
+        default:
+          return `${contextPrefix}Image processing failed. You can try again or use Emergency Mode to continue without an image.`;
+      }
     }
     
     // Enhanced payment-specific messaging
@@ -72,7 +94,26 @@ static shouldRetry(error, attemptCount = 0, maxRetries = 3) {
     if (attemptCount >= maxRetries) return false;
     
     const type = this.classifyError(error);
-    const retryableTypes = ['network', 'timeout', 'server'];
+    const retryableTypes = ['network', 'timeout', 'server', 'image-processing'];
+    
+    // Enhanced retry logic for image processing (prevention measures)
+    if (type === 'image-processing') {
+      // Don't retry certain image errors
+      const message = error.message?.toLowerCase() || '';
+      if (message.includes('corrupted') || 
+          message.includes('invalid') || 
+          message.includes('too large') ||
+          message.includes('unsupported')) {
+        return false;
+      }
+      
+      // Retry network and timeout related image errors
+      if (message.includes('network') || message.includes('timeout')) {
+        return attemptCount < Math.min(maxRetries, 2); // Limited retries for images
+      }
+      
+      return attemptCount < 1; // Single retry for other image errors
+    }
     
     // Enhanced retry logic with wallet payment-specific handling
     if (error.code === 'WALLET_PAYMENT_FAILED') {
@@ -127,6 +168,12 @@ static shouldRetry(error, attemptCount = 0, maxRetries = 3) {
   }
 
 static getRetryDelay(attemptCount, baseDelay = 1000, error = null) {
+    // Enhanced retry delay with image processing timing
+    if (error && this.classifyError(error) === 'image-processing') {
+      // Faster retries for image processing issues
+      baseDelay = 500;
+    }
+    
     // Enhanced retry delay with payment-specific timing
     if (error?.code === 'WALLET_PAYMENT_FAILED') {
       // Wallet-specific retry delays
@@ -147,36 +194,89 @@ static getRetryDelay(attemptCount, baseDelay = 1000, error = null) {
     const jitter = Math.random() * 0.1 * exponentialDelay;
     const totalDelay = exponentialDelay + jitter;
     
-    // Cap at 30 seconds (45 seconds for wallet payments)
-    const maxDelay = error?.code === 'WALLET_PAYMENT_FAILED' ? 45000 : 30000;
+    // Cap at 30 seconds (45 seconds for wallet payments, 10 seconds for images)
+    let maxDelay = 30000;
+    if (error?.code === 'WALLET_PAYMENT_FAILED') {
+      maxDelay = 45000;
+    } else if (error && this.classifyError(error) === 'image-processing') {
+      maxDelay = 10000; // Faster timeouts for image processing
+    }
+    
     return Math.min(totalDelay, maxDelay);
   }
 
   static trackErrorPattern(error, context = '') {
-    // Enhanced error pattern tracking for better diagnostics
-    const errorKey = `${error.name || 'Unknown'}_${error.message || 'NoMessage'}`;
+    // Enhanced error pattern tracking for better diagnostics and monitoring
+    const errorKey = `${error.name || 'Unknown'}_${error.code || 'NoCode'}_${context}`;
     const timestamp = Date.now();
     
     if (!window.errorPatterns) {
       window.errorPatterns = new Map();
     }
     
-    const existing = window.errorPatterns.get(errorKey) || { count: 0, contexts: new Set(), firstSeen: timestamp };
+    const existing = window.errorPatterns.get(errorKey) || { 
+      count: 0, 
+      contexts: new Set(), 
+      firstSeen: timestamp,
+      hourlyCount: 0,
+      lastHourReset: Math.floor(timestamp / (1000 * 60 * 60))
+    };
+    
+    const currentHour = Math.floor(timestamp / (1000 * 60 * 60));
+    
+    // Reset hourly count if hour has changed
+    if (existing.lastHourReset !== currentHour) {
+      existing.hourlyCount = 0;
+      existing.lastHourReset = currentHour;
+    }
+    
     existing.count++;
+    existing.hourlyCount++;
     existing.contexts.add(context);
     existing.lastSeen = timestamp;
     
     window.errorPatterns.set(errorKey, existing);
     
-    // Alert if error pattern is becoming frequent
+    // Alert if error pattern is becoming frequent (monitoring requirement)
     if (existing.count >= 5) {
       console.error(`Critical error pattern detected: ${errorKey} occurred ${existing.count} times`, {
         contexts: Array.from(existing.contexts),
-        timespan: timestamp - existing.firstSeen
+        timespan: timestamp - existing.firstSeen,
+        hourlyCount: existing.hourlyCount
       });
+    }
+
+    // Special monitoring for image submission failures (prevention measures)
+    if (context.includes('image') || context.includes('submission')) {
+      if (existing.hourlyCount >= 5) {
+        console.warn(`High failure rate for ${context}: ${existing.hourlyCount} failures in current hour`);
+      }
     }
     
     return existing;
+  }
+
+  // New method for monitoring integration
+  static getErrorStatistics() {
+    if (!window.errorPatterns) {
+      return { totalErrors: 0, patterns: [] };
+    }
+
+    const patterns = Array.from(window.errorPatterns.entries()).map(([key, data]) => ({
+      errorKey: key,
+      count: data.count,
+      hourlyCount: data.hourlyCount,
+      contexts: Array.from(data.contexts),
+      firstSeen: data.firstSeen,
+      lastSeen: data.lastSeen,
+      duration: data.lastSeen - data.firstSeen
+    }));
+
+    return {
+      totalErrors: patterns.reduce((sum, p) => sum + p.count, 0),
+      totalHourlyErrors: patterns.reduce((sum, p) => sum + p.hourlyCount, 0),
+      patterns: patterns.sort((a, b) => b.count - a.count)
+    };
   }
 }
 
