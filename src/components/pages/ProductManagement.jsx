@@ -4282,12 +4282,13 @@ const ProductFormModal = ({
               Cancel
             </Button>
             <Button
-              type="submit"
+              type="button"
               variant="primary"
               icon="Save"
+              onClick={handleSubmit}
             >
               {editingProduct ? "Update Product" : "Add Product"}
-</Button>
+            </Button>
           </div>
         </div>
       </div>
