@@ -150,7 +150,7 @@ const [formData, setFormData] = useState({
   };
 
   // Handle image upload and processing
-  const handleImageUpload = async (file) => {
+const handleImageUpload = async (file) => {
     try {
       setImageData(prev => ({ ...prev, isProcessing: true, uploadProgress: 0 }));
       
@@ -161,11 +161,11 @@ const [formData, setFormData] = useState({
         return;
       }
       
-      // Process and optimize image
+      // Process image with high quality settings
       const processedImage = await productService.processImage(file, {
-        targetSize: { width: 600, height: 600 },
-        maxFileSize: 100 * 1024, // 100KB
-        quality: 0.9
+        targetSize: { width: 1200, height: 1200 },
+        maxFileSize: 10 * 1024 * 1024, // 10MB - much higher limit
+        quality: 1.0 // Maximum quality
       });
       
       setImageData(prev => ({
@@ -177,7 +177,7 @@ const [formData, setFormData] = useState({
       }));
       
       setFormData(prev => ({ ...prev, imageUrl: processedImage.url }));
-      toast.success('Image uploaded and optimized successfully!');
+      toast.success('High-quality image uploaded successfully!');
       
     } catch (error) {
       console.error('Error uploading image:', error);
