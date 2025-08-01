@@ -15,10 +15,9 @@ const Button = ({
 }) => {
   const baseClasses = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
   
-const variants = {
+  const variants = {
     primary: "bg-gradient-to-r from-primary to-accent text-white hover:shadow-lg hover:scale-105 focus:ring-primary",
     secondary: "bg-gradient-to-r from-secondary to-orange-600 text-white hover:shadow-lg hover:scale-105 focus:ring-secondary",
-    processing: "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg focus:ring-blue-500 animate-pulse",
     outline: "border-2 border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary",
     ghost: "text-gray-700 hover:bg-gray-100 focus:ring-gray-500",
     danger: "bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-lg hover:scale-105 focus:ring-red-500"
@@ -36,17 +35,11 @@ const variants = {
     large: 20
   };
 
-const getVariant = () => {
-    if (loading && variant === 'primary') return 'processing';
-    return variant;
-  };
-
   const classes = `
     ${baseClasses} 
-    ${variants[getVariant()]} 
+    ${variants[variant]} 
     ${sizes[size]} 
     ${disabled || loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-    ${loading ? 'transform-none hover:scale-100' : ''}
     ${className}
   `.trim();
 

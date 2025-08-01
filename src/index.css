@@ -172,45 +172,8 @@
 .quantity-change {
   animation: quantity-pulse 0.3s ease-in-out;
 }
-
-/* Processing Button States */
-.btn-processing {
-  @apply relative overflow-hidden;
-}
-
-.btn-processing::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  animation: processing-shimmer 2s infinite;
-}
-
-@keyframes processing-shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
-}
-
-/* Enhanced Button States */
-.btn-active {
-  @apply bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg;
-}
-
-.btn-processing-state {
-  @apply bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg;
-  animation: processing-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes processing-pulse {
-  0%, 100% { 
-    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
-  }
-  50% { 
-    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
-  }
+.quantity-change {
+  animation: quantity-pulse 0.3s ease-in-out;
 }
 
 /* Button Hover Enhancements */
@@ -218,47 +181,6 @@
   @apply transition-all duration-200 hover:scale-110;
 }
 
-/* Draft Recovery Animations */
-.draft-recovery-enter {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.draft-recovery-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-/* Image Processing States */
-.image-processing {
-  position: relative;
-}
-
-.image-processing::before {
-  content: 'Processing...';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  z-index: 10;
-}
-
-.image-processing::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.7);
-  z-index: 9;
-}
 /* Price Summary Tab Animations */
 .tab-transition {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -520,9 +442,9 @@
     overflow-x: visible;
   }
   
-.swipe-actions-container {
+  .swipe-actions-container {
     overflow-x: visible;
-  }
+}
 }
 
 /* Mobile Copy Button Styles */
