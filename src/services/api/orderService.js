@@ -1,8 +1,6 @@
 import ordersData from "../mockData/orders.json";
-import React from "react";
 import { paymentService } from "@/services/api/paymentService";
 import { productService } from "@/services/api/productService";
-import Error from "@/components/ui/Error";
 class OrderService {
   constructor() {
     this.orders = [...ordersData];
