@@ -2,15 +2,15 @@ import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { productService } from "@/services/api/productService";
 import ApperIcon from "@/components/ApperIcon";
+import Loading from "@/components/ui/Loading";
+import Error from "@/components/ui/Error";
+import Empty from "@/components/ui/Empty";
+import Checkout from "@/components/pages/Checkout";
 import Category from "@/components/pages/Category";
 import Cart from "@/components/pages/Cart";
-import Checkout from "@/components/pages/Checkout";
 import Badge from "@/components/atoms/Badge";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
-import Error from "@/components/ui/Error";
-import Empty from "@/components/ui/Empty";
-import Loading from "@/components/ui/Loading";
 
 // Material UI Switch Component
 const Switch = ({ checked, onChange, color = "primary", disabled = false, ...props }) => {
@@ -154,18 +154,19 @@ const handleImageUpload = async (file) => {
     try {
       setImageData(prev => ({ ...prev, isProcessing: true, uploadProgress: 0 }));
       
-      // Validate image file
-      const validation = await productService.validateImage(file);
-      if (!validation.isValid) {
-        toast.error(validation.error);
+      // Validate image file - only check file type, no size restrictions
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        setImageData(prev => ({ ...prev, isProcessing: false, uploadProgress: 0 }));
         return;
       }
       
-      // Process image with high quality settings
+      // Process image with no quality restrictions - preserve original quality
       const processedImage = await productService.processImage(file, {
-        targetSize: { width: 1200, height: 1200 },
-        maxFileSize: 10 * 1024 * 1024, // 10MB - much higher limit
-        quality: 1.0 // Maximum quality
+        preserveOriginal: true, // Keep original dimensions and quality
+        quality: 1.0, // Maximum quality - no compression
+        maxFileSize: null, // No file size limit
+        targetSize: null // No size restrictions - preserve original dimensions
       });
       
       setImageData(prev => ({
@@ -177,7 +178,7 @@ const handleImageUpload = async (file) => {
       }));
       
       setFormData(prev => ({ ...prev, imageUrl: processedImage.url }));
-      toast.success('High-quality image uploaded successfully!');
+      toast.success('Original quality image uploaded successfully - no restrictions applied!');
       
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -2546,13 +2547,7 @@ const ImageUploadSystem = ({
       toast.error('Please select a valid image file');
       return;
     }
-    
-    // Validate file size (max 10MB for processing)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image file size must be less than 10MB');
-      return;
-    }
-    
+// No file size restrictions - accept any size image
     if (onImageUpload) {
       onImageUpload(file);
     }
@@ -2639,10 +2634,10 @@ const ImageUploadSystem = ({
               
               <div>
                 <p className="text-lg font-medium text-gray-900">
-                  {dragActive ? 'Drop image here' : 'Upload product image'}
+{dragActive ? 'Drop image here' : 'Upload product image'}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Drag & drop or click to browse • Max 10MB • Auto-optimized to 600x600px
+                  Drag & drop or click to browse • No size limits • Original quality preserved
                 </p>
               </div>
               
@@ -2724,8 +2719,8 @@ const ImageUploadSystem = ({
                   </div>
                   
                   {/* Quality Indicator */}
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-success text-white px-2 py-1 rounded text-xs">
-                    Quality: High
+<div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-success text-white px-2 py-1 rounded text-xs">
+                    Quality: Original (100%)
                   </div>
                   
                   {/* Crop Area Guide */}
@@ -2748,34 +2743,33 @@ const ImageUploadSystem = ({
                     Validated
                   </Badge>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
+<div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center space-x-2">
-                    <ApperIcon name="Maximize2" size={14} className="text-gray-500" />
+                    <ApperIcon name="Maximize2" size={14} className="text-green-500" />
                     <div>
                       <span className="text-gray-600">Target Size:</span>
-                      <span className="ml-2 font-medium">600 x 600px</span>
+                      <span className="ml-2 font-medium text-green-600">Original Preserved</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <ApperIcon name="HardDrive" size={14} className="text-gray-500" />
+                    <ApperIcon name="HardDrive" size={14} className="text-green-500" />
                     <div>
                       <span className="text-gray-600">Max File Size:</span>
-                      <span className="ml-2 font-medium">≤ 100KB</span>
+                      <span className="ml-2 font-medium text-green-600">No Limit</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <ApperIcon name="Square" size={14} className="text-gray-500" />
+                    <ApperIcon name="Square" size={14} className="text-green-500" />
                     <div>
                       <span className="text-gray-600">Aspect Ratio:</span>
-                      <span className="ml-2 font-medium">1:1 (Square)</span>
+                      <span className="ml-2 font-medium text-green-600">Any Size</span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <ApperIcon name="FileImage" size={14} className="text-gray-500" />
+<div className="flex items-center space-x-2">
+                    <ApperIcon name="FileImage" size={14} className="text-green-500" />
                     <div>
                       <span className="text-gray-600">Format:</span>
-                      <span className="ml-2 font-medium">WebP/JPEG</span>
+                      <span className="ml-2 font-medium text-green-600">Original Format</span>
                     </div>
                   </div>
                 </div>
@@ -2786,38 +2780,39 @@ const ImageUploadSystem = ({
                     <ApperIcon name="Shield" size={14} />
                     <span>Quality Assessment</span>
                   </h6>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
+<div className="grid grid-cols-2 gap-3 text-xs">
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 rounded-full bg-success"></div>
-                      <span className="text-gray-600">No watermarks detected</span>
+                      <span className="text-gray-600">No size restrictions</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 rounded-full bg-success"></div>
-                      <span className="text-gray-600">High image sharpness</span>
+                      <span className="text-gray-600">Maximum quality preserved</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 rounded-full bg-success"></div>
-                      <span className="text-gray-600">Proper resolution</span>
+                      <span className="text-gray-600">Original dimensions kept</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 rounded-full bg-success"></div>
-                      <span className="text-gray-600">Clean background</span>
+                      <span className="text-gray-600">No compression applied</span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-4">
+<div className="flex items-center space-x-4">
                   <label className="flex items-center space-x-2">
-                    <input type="checkbox" className="rounded text-primary focus:ring-primary" defaultChecked />
-                    <span className="text-sm text-gray-700">Smart cropping</span>
+                    <input type="checkbox" className="rounded text-primary focus:ring-primary" />
+                    <span className="text-sm text-gray-700">Smart cropping (optional)</span>
                   </label>
                   <label className="flex items-center space-x-2">
                     <input type="checkbox" className="rounded text-primary focus:ring-primary" />
-                    <span className="text-sm text-gray-700">Remove background</span>
+                    <span className="text-sm text-gray-700">Remove background (optional)</span>
                   </label>
                   <label className="flex items-center space-x-2">
                     <input type="checkbox" className="rounded text-primary focus:ring-primary" defaultChecked />
-                    <span className="text-sm text-gray-700">Quality validation</span>
+                    <span className="text-sm text-gray-700">Preserve original quality</span>
                   </label>
                 </div>
               </div>
