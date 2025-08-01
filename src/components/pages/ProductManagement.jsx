@@ -1690,8 +1690,9 @@ icon="Save"
           onUpdate={handleBulkPriceUpdate}
           onClose={() => setShowBulkPriceModal(false)}
 />
+/>
       )}
-      </div>
+    </div>
       )}
     </div>
   );
