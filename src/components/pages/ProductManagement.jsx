@@ -11,7 +11,6 @@ import Cart from "@/components/pages/Cart";
 import Badge from "@/components/atoms/Badge";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
-
 // Material UI Switch Component
 const Switch = ({ checked, onChange, color = "primary", disabled = false, ...props }) => {
   const baseClasses = "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
@@ -1687,10 +1686,9 @@ icon="Save"
         <EnhancedBulkActionsModal
           products={products}
           categories={categories}
-          onUpdate={handleBulkPriceUpdate}
+onUpdate={handleBulkPriceUpdate}
           onClose={() => setShowBulkPriceModal(false)}
-/>
-/>
+        />
       )}
     </div>
       )}
