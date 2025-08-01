@@ -172,10 +172,6 @@
 .quantity-change {
   animation: quantity-pulse 0.3s ease-in-out;
 }
-.quantity-change {
-  animation: quantity-pulse 0.3s ease-in-out;
-}
-}
 
 /* Processing Button States */
 .btn-processing {
@@ -524,9 +520,9 @@
     overflow-x: visible;
   }
   
-  .swipe-actions-container {
+.swipe-actions-container {
     overflow-x: visible;
-}
+  }
 }
 
 /* Mobile Copy Button Styles */
