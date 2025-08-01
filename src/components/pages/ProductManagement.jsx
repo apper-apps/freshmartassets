@@ -8,9 +8,9 @@ import Empty from "@/components/ui/Empty";
 import Checkout from "@/components/pages/Checkout";
 import Category from "@/components/pages/Category";
 import Cart from "@/components/pages/Cart";
-import Badge from "@/components/atoms/Badge";
-import Input from "@/components/atoms/Input";
-import Button from "@/components/atoms/Button";
+import { Badge } from "@/components/atoms/Badge";
+import { Input } from "@/components/atoms/Input";
+import { Button } from "@/components/atoms/Button";
 // Material UI Switch Component
 const Switch = ({ checked, onChange, color = "primary", disabled = false, ...props }) => {
   const baseClasses = "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
@@ -1658,8 +1658,7 @@ return matchesSearch && matchesCategory;
                   placeholder="Auto-generated if left empty"
                 />
               </div>
-
-              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+<div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
                 <Button
                   type="button"
                   variant="ghost"
@@ -1667,7 +1666,7 @@ return matchesSearch && matchesCategory;
                 >
                   Cancel
                 </Button>
-<Button
+                <Button
                   type="submit"
                   variant="primary"
                   icon="Save"
@@ -1676,17 +1675,17 @@ return matchesSearch && matchesCategory;
                 </Button>
               </div>
             </form>
-      </div>
-    </div>
+          </div>
+        </div>
       )}
 
       {/* Bulk Price Update Modal */}
-{/* Enhanced Bulk Actions Modal */}
+      {/* Enhanced Bulk Actions Modal */}
       {showBulkPriceModal && (
         <EnhancedBulkActionsModal
           products={products}
           categories={categories}
-onUpdate={handleBulkPriceUpdate}
+          onUpdate={handleBulkPriceUpdate}
           onClose={() => setShowBulkPriceModal(false)}
         />
       )}
