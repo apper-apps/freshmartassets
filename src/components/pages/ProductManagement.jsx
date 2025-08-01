@@ -4201,6 +4201,8 @@ const ProductFormModal = ({
   units,
   handleInputChange,
   handleImageUpload,
+  handleImageSearch,
+  handleAIImageGenerate,
   handleImageSelect,
   handleSubmit,
   resetForm
@@ -4330,11 +4332,13 @@ const ProductFormModal = ({
             icon="FileText"
           />
 
-          {/* Image Upload System */}
+{/* Image Upload System */}
           <ImageUploadSystem
-imageData={imageData}
+            imageData={imageData}
             setImageData={setImageData}
             onImageUpload={handleImageUpload}
+            onImageSearch={handleImageSearch}
+            onAIImageGenerate={handleAIImageGenerate}
             onImageSelect={handleImageSelect}
             formData={formData}
           />
