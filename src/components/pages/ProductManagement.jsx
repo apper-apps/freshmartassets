@@ -1671,12 +1671,10 @@ return matchesSearch && matchesCategory;
                 <Button
                   type="submit"
                   variant="primary"
-                  icon="Save"
-                >
-                  {editingProduct ? "Update Product" : "Add Product"}
-{editingProduct ? "Update Product" : "Add Product"}
-                </Button>
-              </div>
+icon="Save"
+            >
+              {editingProduct ? "Update Product" : "Add Product"}
+            </Button>
             </form>
           </div>
       )}
@@ -4864,9 +4862,9 @@ const ProductFormModal = ({
             onImageSelect={handleImageSelect}
             onAIImageGenerate={handleAIImageGenerate}
             formData={formData}
-          />
+/>
 
-<div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+          <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
             <Button
               type="button"
               variant="ghost"
