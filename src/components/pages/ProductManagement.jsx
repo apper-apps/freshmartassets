@@ -1673,10 +1673,12 @@ return matchesSearch && matchesCategory;
                   variant="primary"
 icon="Save"
             >
-              {editingProduct ? "Update Product" : "Add Product"}
+{editingProduct ? "Update Product" : "Add Product"}
             </Button>
-            </form>
           </div>
+        </form>
+      </div>
+    </div>
       )}
 
       {/* Bulk Price Update Modal */}
