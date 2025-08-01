@@ -4201,9 +4201,7 @@ const ProductFormModal = ({
   units,
   handleInputChange,
   handleImageUpload,
-  handleImageSearch,
   handleImageSelect,
-  handleAIImageGenerate,
   handleSubmit,
   resetForm
 }) => {
