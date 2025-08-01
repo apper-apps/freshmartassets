@@ -886,9 +886,9 @@ handleImageSelect={handleImageSelect}
                   <ApperIcon name="X" size={24} />
                 </button>
               </div>
-            </div>
+</div>
 
-<form onSubmit={handleSubmit} className="p-6 space-y-8">
+            <div className="p-6 space-y-8">
               {/* 1. Basic Info Section */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2 pb-4 border-b border-gray-200">
@@ -1654,9 +1654,9 @@ handleImageSelect={handleImageSelect}
                   icon="Save"
                 >
                   {editingProduct ? "Update Product" : "Add Product"}
-                </Button>
+</Button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -1956,9 +1956,9 @@ const validationPromises = filteredProducts.map(async (product) => {
               </button>
             ))}
           </div>
-        </div>
+</div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="p-6 space-y-6">
           {/* Price Updates Tab */}
           {activeTab === 'pricing' && (
             <div className="space-y-6">
@@ -2422,9 +2422,9 @@ const validationPromises = filteredProducts.map(async (product) => {
               disabled={!showPreview || preview.length === 0}
             >
               Update {preview.length} Products
-            </Button>
+</Button>
           </div>
-</form>
+        </div>
       </div>
     </div>
   );
@@ -4222,9 +4222,9 @@ const ProductFormModal = ({
               <ApperIcon name="X" size={24} />
             </button>
           </div>
-        </div>
+</div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="p-6 space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
@@ -4357,9 +4357,9 @@ const ProductFormModal = ({
               icon="Save"
             >
               {editingProduct ? "Update Product" : "Add Product"}
-            </Button>
+</Button>
           </div>
-</form>
+        </div>
       </div>
     </div>
   );
