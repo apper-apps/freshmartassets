@@ -2,15 +2,15 @@ import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { productService } from "@/services/api/productService";
 import ApperIcon from "@/components/ApperIcon";
+import Loading from "@/components/ui/Loading";
+import Error from "@/components/ui/Error";
+import Empty from "@/components/ui/Empty";
+import Checkout from "@/components/pages/Checkout";
 import Category from "@/components/pages/Category";
 import Cart from "@/components/pages/Cart";
-import Checkout from "@/components/pages/Checkout";
 import Badge from "@/components/atoms/Badge";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
-import Error from "@/components/ui/Error";
-import Empty from "@/components/ui/Empty";
-import Loading from "@/components/ui/Loading";
 
 // Material UI Switch Component
 const Switch = ({ checked, onChange, color = "primary", disabled = false, ...props }) => {
@@ -84,13 +84,10 @@ const [formData, setFormData] = useState({
   });
   
   // Image management state
-  const [imageData, setImageData] = useState({
+const [imageData, setImageData] = useState({
     selectedImage: null,
     croppedImage: null,
-    uploadProgress: 0,
-    isProcessing: false,
-    searchResults: [],
-    activeTab: 'upload' // upload, search, ai-generate
+    isProcessing: false
   });
 
   // Constants
@@ -150,83 +147,73 @@ const [formData, setFormData] = useState({
   };
 
   // Handle image upload and processing
-  const handleImageUpload = async (file) => {
+const handleImageUpload = async (file) => {
     try {
-      setImageData(prev => ({ ...prev, isProcessing: true, uploadProgress: 0 }));
+      setImageData(prev => ({ ...prev, isProcessing: true }));
       
-      // Validate image file
-      const validation = await productService.validateImage(file);
-      if (!validation.isValid) {
-        toast.error(validation.error);
-        return;
-      }
-      
-      // Process and optimize image
-      const processedImage = await productService.processImage(file, {
-        targetSize: { width: 600, height: 600 },
-        maxFileSize: 100 * 1024, // 100KB
-        quality: 0.9
-      });
+      // Create image URL for immediate preview
+      const imageUrl = URL.createObjectURL(file);
       
       setImageData(prev => ({
         ...prev,
-        selectedImage: processedImage.url,
-        croppedImage: processedImage.url,
-        isProcessing: false,
-        uploadProgress: 100
+        selectedImage: imageUrl,
+        croppedImage: imageUrl,
+        isProcessing: false
       }));
       
-      setFormData(prev => ({ ...prev, imageUrl: processedImage.url }));
-      toast.success('Image uploaded and optimized successfully!');
+      setFormData(prev => ({ ...prev, imageUrl }));
+      toast.success('✓ Image uploaded and ready!');
       
     } catch (error) {
       console.error('Error uploading image:', error);
-      setImageData(prev => ({ ...prev, isProcessing: false, uploadProgress: 0 }));
+      setImageData(prev => ({ ...prev, isProcessing: false }));
       toast.error('Failed to upload image. Please try again.');
     }
   };
 
-  // Handle image search
-  const handleImageSearch = async (query) => {
+// Handle image search
+  const handleImageSearch = async (searchQuery) => {
     try {
       setImageData(prev => ({ ...prev, isProcessing: true }));
       
-      const searchResults = await productService.searchImages(query);
+      // Mock image search results - replace with actual API call
+      const mockResults = [
+        `https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=600&fit=crop`,
+        `https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=600&h=600&fit=crop`,
+        `https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=600&fit=crop`
+      ];
+      
       setImageData(prev => ({
         ...prev,
-        searchResults,
+        searchResults: mockResults,
         isProcessing: false
       }));
       
+      toast.success(`Found ${mockResults.length} images for "${searchQuery}"`);
     } catch (error) {
       console.error('Error searching images:', error);
       setImageData(prev => ({ ...prev, isProcessing: false }));
       toast.error('Failed to search images. Please try again.');
     }
-};
+  };
 
   // Handle AI image generation
-  const handleAIImageGenerate = async (prompt, style = 'realistic') => {
+  const handleAIImageGenerate = async (prompt) => {
     try {
       setImageData(prev => ({ ...prev, isProcessing: true }));
       
-      const generatedImage = await productService.generateAIImage(prompt, {
-        style,
-        category: formData.category,
-        aspectRatio: '1:1',
-        quality: 'high'
-      });
+      // Mock AI generation - replace with actual API call
+      const generatedImage = `https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=600&h=600&fit=crop`;
       
       setImageData(prev => ({
         ...prev,
-        selectedImage: generatedImage.url,
-        croppedImage: generatedImage.url,
+        selectedImage: generatedImage,
+        croppedImage: generatedImage,
         isProcessing: false
       }));
       
-      setFormData(prev => ({ ...prev, imageUrl: generatedImage.url }));
-      toast.success('AI image generated successfully!');
-      
+      setFormData(prev => ({ ...prev, imageUrl: generatedImage }));
+      toast.success('✓ AI image generated successfully!');
     } catch (error) {
       console.error('Error generating AI image:', error);
       setImageData(prev => ({ ...prev, isProcessing: false }));
@@ -235,17 +222,15 @@ const [formData, setFormData] = useState({
   };
 
   // Handle image selection from search results
-  const handleImageSelect = (imageUrl, attribution = null) => {
+  const handleImageSelect = (imageUrl) => {
     setImageData(prev => ({
       ...prev,
       selectedImage: imageUrl,
-      croppedImage: imageUrl,
-      attribution
+      croppedImage: imageUrl
     }));
     setFormData(prev => ({ ...prev, imageUrl }));
-    toast.success('Image selected successfully!');
+    toast.success('✓ Image selected!');
   };
-  // Calculate profit metrics based on current form data
   const calculateProfitMetrics = (data) => {
     const price = parseFloat(data.price) || 0;
     const purchasePrice = parseFloat(data.purchasePrice) || 0;
@@ -550,14 +535,11 @@ setFormData({
       discountPriority: 1
     });
     
-    // Reset image data
+// Reset image data
     setImageData({
       selectedImage: null,
       croppedImage: null,
-      uploadProgress: 0,
-      isProcessing: false,
-      searchResults: [],
-      activeTab: 'upload'
+      isProcessing: false
     });
     
     setEditingProduct(null);
@@ -640,8 +622,7 @@ return matchesSearch && matchesCategory;
           handleInputChange={handleInputChange}
           handleImageUpload={handleImageUpload}
           handleImageSearch={handleImageSearch}
-          handleImageSelect={handleImageSelect}
-          handleAIImageGenerate={handleAIImageGenerate}
+handleImageSelect={handleImageSelect}
           handleSubmit={handleSubmit}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
@@ -2454,70 +2435,39 @@ const ImageUploadSystem = ({
   imageData, 
   setImageData, 
   onImageUpload, 
-  onImageSearch, 
   onImageSelect,
-  onAIImageGenerate,
   formData
 }) => {
-  const [dragActive, setDragActive] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [cropData, setCropData] = useState({ x: 0, y: 0, width: 100, height: 100 });
+const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
 // Handle image selection from search results or AI generation
-  const handleImageSelect = (imageUrl, attribution = null) => {
+const handleImageSelect = (imageUrl) => {
     try {
       if (!imageUrl) {
         toast.error('Invalid image URL');
         return;
       }
       
-      // Ensure we're working with a string URL for safe serialization
       const urlString = typeof imageUrl === 'string' ? imageUrl : imageUrl.toString();
       
       setImageData(prev => ({ 
         ...prev, 
-        selectedImage: urlString, 
-        attribution,
+        selectedImage: urlString,
         isProcessing: false 
       }));
       
       if (onImageSelect) {
-        onImageSelect(urlString, attribution);
+        onImageSelect(urlString);
       }
       
-      toast.success('Image selected successfully!');
+      toast.success('✓ Image selected!');
     } catch (error) {
       console.error('Error selecting image:', error);
       toast.error('Failed to select image');
     }
   };
-
   // Handle AI image generation
-  const handleAIImageGenerate = async (prompt, style = 'realistic') => {
-    try {
-      if (!prompt?.trim()) {
-        toast.error('Please provide a prompt for AI generation');
-        return;
-      }
-      
-      setImageData(prev => ({ ...prev, isProcessing: true }));
-      
-      // Simulate AI generation process
-      const generatedImage = await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(`https://picsum.photos/600/600?random=${Date.now()}`);
-        }, 2000);
-      });
-      
-      handleImageSelect(generatedImage, 'AI Generated');
-      
-    } catch (error) {
-      console.error('Error generating AI image:', error);
-      toast.error('Failed to generate AI image');
-      setImageData(prev => ({ ...prev, isProcessing: false }));
-    }
-  };
 
   // Handle drag events
   const handleDragOver = (e) => {
@@ -2541,15 +2491,9 @@ const ImageUploadSystem = ({
   };
 
   const handleFileSelect = (file) => {
-    // Validate file type
+// Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please select a valid image file');
-      return;
-    }
-    
-    // Validate file size (max 10MB for processing)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image file size must be less than 10MB');
       return;
     }
     
@@ -2565,12 +2509,6 @@ const ImageUploadSystem = ({
     }
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim() && onImageSearch) {
-      onImageSearch(searchQuery.trim());
-    }
-  };
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
@@ -2583,10 +2521,11 @@ const ImageUploadSystem = ({
       </label>
       
       {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+{/* Tab Navigation */}
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-4">
         {[
           { id: 'upload', label: 'Upload', icon: 'Upload' },
-          { id: 'search', label: 'AI Search', icon: 'Search' },
+          { id: 'search', label: 'Search', icon: 'Search' },
           { id: 'ai-generate', label: 'AI Generate', icon: 'Sparkles' }
         ].map((tab) => (
           <button
@@ -2594,7 +2533,7 @@ const ImageUploadSystem = ({
             type="button"
             onClick={() => setImageData(prev => ({ ...prev, activeTab: tab.id }))}
             className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-              imageData.activeTab === tab.id
+              (imageData.activeTab || 'upload') === tab.id
                 ? 'bg-white text-primary shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
@@ -2606,8 +2545,8 @@ const ImageUploadSystem = ({
       </div>
 
       {/* Upload Tab */}
-      {imageData.activeTab === 'upload' && (
-        <div className="space-y-4">
+{/* Upload Tab */}
+      {(imageData.activeTab || 'upload') === 'upload' && (
           {/* Drag & Drop Zone */}
           <div
             onDragOver={handleDragOver}
@@ -2638,11 +2577,11 @@ const ImageUploadSystem = ({
               </div>
               
               <div>
-                <p className="text-lg font-medium text-gray-900">
-                  {dragActive ? 'Drop image here' : 'Upload product image'}
+<p className="text-lg font-medium text-gray-900">
+                  {dragActive ? 'Drop image here' : 'Upload product image (1:1 ratio recommended)'}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Drag & drop or click to browse • Max 10MB • Auto-optimized to 600x600px
+                  Drag & drop or click to browse • Accepts JPG, PNG, WEBP, HEIC
                 </p>
               </div>
               
@@ -2656,20 +2595,6 @@ const ImageUploadSystem = ({
           </div>
 
           {/* Upload Progress */}
-          {imageData.isProcessing && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Processing image...</span>
-                <span className="text-gray-600">{imageData.uploadProgress || 0}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${imageData.uploadProgress || 0}%` }}
-                />
-              </div>
-            </div>
-          )}
 
           {/* Image Preview & Cropping */}
           {imageData.selectedImage && (
@@ -2704,35 +2629,28 @@ const ImageUploadSystem = ({
                   src={imageData.selectedImage}
                   alt="Product preview"
                   className="w-full max-w-md mx-auto rounded-lg shadow-md"
-                  style={{ maxHeight: '300px', objectFit: 'contain' }}
+style={{ maxHeight: '300px', objectFit: 'cover', aspectRatio: '1/1' }}
                 />
                 
-                {/* Enhanced Visual Boundary Overlay */}
+                {/* 1:1 Aspect Ratio Overlay */}
                 <div className="absolute inset-0 pointer-events-none">
-                  {/* Corner Markers for Image Boundaries */}
+                  {/* Corner Markers for 1:1 Boundaries */}
                   <div className="absolute top-2 left-2 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
                   <div className="absolute top-2 right-2 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
                   <div className="absolute bottom-2 left-2 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
                   <div className="absolute bottom-2 right-2 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
                   
-                  {/* Frame Compatibility Badge */}
+                  {/* 1:1 Ratio Badge */}
                   <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-white px-3 py-1 rounded-full text-xs font-medium shadow-md">
                     <div className="flex items-center space-x-1">
                       <ApperIcon name="CheckCircle" size={12} />
-                      <span>Frame Compatible</span>
+                      <span>1:1 Ratio</span>
                     </div>
                   </div>
                   
-                  {/* Quality Indicator */}
+                  {/* Ready Badge */}
                   <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-success text-white px-2 py-1 rounded text-xs">
-                    Quality: High
-                  </div>
-                  
-                  {/* Crop Area Guide */}
-                  <div className="absolute inset-4 border-2 border-dashed border-accent/50 rounded-lg">
-                    <div className="absolute -top-5 left-0 text-xs text-gray-600 bg-white px-1 rounded">
-                      Optimal Crop Area
-                    </div>
+                    ✓ Ready
                   </div>
                 </div>
               </div>
@@ -2827,605 +2745,85 @@ const ImageUploadSystem = ({
       )}
 
 {/* Enhanced Unsplash Search Tab */}
-      {imageData.activeTab === 'search' && (
-        <UnsplashImageSearch
-          imageData={imageData}
-          setImageData={setImageData}
-          onImageSearch={onImageSearch}
-          onImageSelect={handleImageSelect}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          formData={formData}
-        />
+      {(imageData.activeTab || 'upload') === 'search' && (
+        <div className="space-y-4">
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              placeholder="Search for images..."
+              value={imageData.searchQuery || ''}
+              onChange={(e) => setImageData(prev => ({ ...prev, searchQuery: e.target.value }))}
+              className="flex-1 input-field"
+            />
+            <Button
+              type="button"
+              variant="primary"
+              icon="Search"
+              onClick={() => handleImageSearch(imageData.searchQuery || formData.name)}
+              disabled={imageData.isProcessing}
+            >
+              Search
+            </Button>
+          </div>
+          
+          {imageData.searchResults && imageData.searchResults.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {imageData.searchResults.map((imageUrl, index) => (
+                <div
+                  key={index}
+                  className="relative cursor-pointer group"
+                  onClick={() => handleImageSelect(imageUrl)}
+                >
+                  <img
+                    src={imageUrl}
+                    alt={`Search result ${index + 1}`}
+                    className="w-full h-32 object-cover rounded-lg group-hover:opacity-75 transition-opacity"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="primary" size="sm" icon="Check">
+                      Select
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
 {/* Enhanced AI Image Generator Tab */}
-      {imageData.activeTab === 'ai-generate' && (
-        <AIImageGenerator
-          imageData={imageData}
-          setImageData={setImageData}
-          onImageGenerate={handleAIImageGenerate}
-          onImageSelect={handleImageSelect}
-          formData={formData}
-        />
+      {(imageData.activeTab || 'upload') === 'ai-generate' && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              AI Image Prompt
+            </label>
+            <textarea
+              placeholder={`Generate an image of ${formData.name || 'a product'} for ${formData.category || 'general'} category...`}
+              value={imageData.aiPrompt || ''}
+              onChange={(e) => setImageData(prev => ({ ...prev, aiPrompt: e.target.value }))}
+              className="w-full h-24 input-field resize-none"
+            />
+          </div>
+          
+          <Button
+            type="button"
+            variant="primary"
+            icon="Sparkles"
+            onClick={() => handleAIImageGenerate(imageData.aiPrompt || `${formData.name} ${formData.category}`)}
+            disabled={imageData.isProcessing}
+            className="w-full"
+          >
+            {imageData.isProcessing ? 'Generating...' : 'Generate AI Image'}
+          </Button>
+        </div>
       )}
     </div>
   );
 };
 
 // AI Image Generator Component
-const AIImageGenerator = ({ 
-  imageData, 
-  setImageData, 
-  onImageGenerate, 
-  onImageSelect,
-  formData 
-}) => {
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState('realistic');
-  const [generatedImages, setGeneratedImages] = useState([]);
-  const [generationHistory, setGenerationHistory] = useState([]);
 
-  const styles = [
-    { id: 'realistic', name: 'Hyper-Realistic', description: 'Photo-realistic product images' },
-    { id: 'clean', name: 'Clean & Minimal', description: 'Clean white background style' },
-    { id: 'studio', name: 'Studio Quality', description: 'Professional studio lighting' },
-    { id: 'lifestyle', name: 'Lifestyle', description: 'Natural everyday setting' },
-    { id: 'artistic', name: 'Artistic', description: 'Creative and artistic presentation' },
-    { id: 'commercial', name: 'Commercial', description: 'Marketing-ready images' }
-  ];
-
-  const foodCategories = [
-    'Fresh Vegetables', 'Tropical Fruits', 'Dairy Products', 'Premium Meat', 'Artisan Bakery',
-    'Organic Produce', 'Seafood & Fish', 'Nuts & Seeds', 'Spices & Herbs', 'Beverages',
-    'Frozen Foods', 'Canned Goods', 'Snacks & Treats', 'Breakfast Items', 'Condiments',
-    'Health Foods', 'International Cuisine', 'Desserts & Sweets', 'Ready Meals', 'Baby Food'
-  ];
-
-  const promptSuggestions = [
-    'Fresh organic vegetables on a clean white background',
-    'Premium quality meat cuts with professional lighting',
-    'Artisan bread loaves in a rustic bakery setting',
-    'Colorful tropical fruits arranged aesthetically',
-    'Dairy products with milk splash effect',
-    'Gourmet cheese selection on marble surface'
-  ];
-
-  const handlePromptSubmit = async (e) => {
-    e.preventDefault();
-    if (aiPrompt.trim()) {
-      await onImageGenerate(aiPrompt.trim(), selectedStyle);
-      
-      // Add to generation history
-      setGenerationHistory(prev => [{
-        prompt: aiPrompt.trim(),
-        style: selectedStyle,
-        timestamp: new Date().toISOString()
-      }, ...prev.slice(0, 9)]); // Keep last 10
-    }
-  };
-
-  const generateSmartPrompt = () => {
-    const category = formData.category || 'food product';
-    const productName = formData.name || 'product';
-    const prompts = [
-      `Professional ${category.toLowerCase()} photography of ${productName}, studio lighting, clean white background, commercial quality`,
-      `High-resolution ${productName} image, ${category.toLowerCase()}, marketing photography, attractive presentation`,
-      `Premium ${productName}, ${category.toLowerCase()} category, professional food photography, clean and appetizing`
-    ];
-    const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-    setAiPrompt(randomPrompt);
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* AI Generation Form */}
-      <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-lg border border-purple-200">
-        <div className="flex items-center space-x-2 mb-4">
-          <ApperIcon name="Sparkles" size={20} className="text-purple-600" />
-          <h4 className="font-medium text-gray-900">AI Image Generation</h4>
-          <Badge variant="success" className="text-xs">Stable Diffusion</Badge>
-        </div>
-        
-        <form onSubmit={handlePromptSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Describe your product image
-            </label>
-            <textarea
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              placeholder="E.g., Fresh organic tomatoes on a clean white background, professional studio lighting..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
-              rows={3}
-            />
-            <div className="flex justify-between items-center">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={generateSmartPrompt}
-                icon="Wand2"
-              >
-                Smart Suggest
-              </Button>
-              <span className="text-xs text-gray-500">{aiPrompt.length}/500</span>
-            </div>
-          </div>
-
-          {/* Style Selection */}
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">
-              Generation Style
-            </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {styles.map((style) => (
-                <div
-                  key={style.id}
-                  onClick={() => setSelectedStyle(style.id)}
-                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedStyle === style.id
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-300'
-                  }`}
-                >
-                  <div className="text-sm font-medium text-gray-900">{style.name}</div>
-                  <div className="text-xs text-gray-600 mt-1">{style.description}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Prompts */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Quick Prompts
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {promptSuggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => setAiPrompt(suggestion)}
-                  className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm hover:bg-purple-200 transition-colors"
-                >
-                  {suggestion.split(' ').slice(0, 4).join(' ')}...
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex space-x-3">
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={imageData.isProcessing || !aiPrompt.trim()}
-              loading={imageData.isProcessing}
-              icon="Sparkles"
-              className="flex-1"
-            >
-              {imageData.isProcessing ? 'Generating...' : 'Generate Image'}
-            </Button>
-          </div>
-        </form>
-
-        {/* Generation Progress */}
-        {imageData.isProcessing && (
-          <div className="mt-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Generating high-quality image...</span>
-              <span className="text-purple-600">~30 seconds</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full animate-pulse" style={{ width: '70%' }} />
-            </div>
-            <div className="text-xs text-gray-500">Processing with Stable Diffusion AI</div>
-          </div>
-        )}
-      </div>
-
-      {/* Generated Images */}
-      {imageData.selectedImage && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-900">Generated Image</h4>
-          <div className="relative group">
-            <img
-              src={imageData.selectedImage}
-              alt="AI Generated"
-              className="w-full max-w-md mx-auto rounded-lg shadow-md"
-              style={{ maxHeight: '400px', objectFit: 'contain' }}
-            />
-            <div className="absolute top-2 left-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-1 rounded text-xs">
-              AI Generated
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Generation History */}
-      {generationHistory.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="font-medium text-gray-900">Recent Generations</h4>
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {generationHistory.map((item, index) => (
-              <div
-                key={index}
-                onClick={() => setAiPrompt(item.prompt)}
-                className="p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors"
-              >
-                <div className="text-sm text-gray-900 line-clamp-1">{item.prompt}</div>
-                <div className="text-xs text-gray-500 flex justify-between">
-                  <span>{item.style}</span>
-                  <span>{new Date(item.timestamp).toLocaleTimeString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Enhanced Unsplash Image Search Component
-const UnsplashImageSearch = ({ 
-  imageData, 
-  setImageData, 
-  onImageSearch, 
-  onImageSelect, 
-  searchQuery, 
-  setSearchQuery 
-}) => {
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [orientation, setOrientation] = useState('square');
-
-  // Comprehensive food category mapping for enhanced search
-  const foodCategories = [
-    { id: 'vegetables', name: 'Fresh Vegetables', icon: 'Carrot', color: 'bg-green-100 text-green-700' },
-    { id: 'fruits', name: 'Tropical Fruits', icon: 'Apple', color: 'bg-orange-100 text-orange-700' },
-    { id: 'meat', name: 'Premium Meat', icon: 'Beef', color: 'bg-red-100 text-red-700' },
-    { id: 'dairy', name: 'Dairy Products', icon: 'Milk', color: 'bg-blue-100 text-blue-700' },
-    { id: 'bakery', name: 'Artisan Bakery', icon: 'Bread', color: 'bg-yellow-100 text-yellow-700' },
-    { id: 'seafood', name: 'Seafood & Fish', icon: 'Fish', color: 'bg-cyan-100 text-cyan-700' },
-    { id: 'beverages', name: 'Beverages', icon: 'Coffee', color: 'bg-purple-100 text-purple-700' },
-    { id: 'spices', name: 'Spices & Herbs', icon: 'Leaf', color: 'bg-emerald-100 text-emerald-700' },
-    { id: 'organic', name: 'Organic Produce', icon: 'Sprout', color: 'bg-lime-100 text-lime-700' },
-    { id: 'snacks', name: 'Healthy Snacks', icon: 'Cookie', color: 'bg-amber-100 text-amber-700' }
-  ];
-
-  const trendingSearches = [
-    'organic vegetables', 'fresh fruits', 'artisan bread', 'premium coffee',
-    'dairy products', 'healthy snacks', 'gourmet cheese', 'fresh herbs',
-    'farm fresh', 'sustainable food', 'local produce', 'superfood'
-  ];
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      onImageSearch(searchQuery.trim(), { category: selectedCategory, orientation });
-    }
-  };
-
-  const handleCategorySearch = (category) => {
-    setSelectedCategory(category.id || category);
-    const searchTerm = category.id ? category.name.toLowerCase() : (category === 'all' ? 'food' : category.toLowerCase());
-    setSearchQuery(searchTerm);
-    onImageSearch(searchTerm, { category: category.id || category, orientation });
-  };
-  return (
-    <div className="space-y-6">
-      {/* Search Form */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
-        <div className="flex items-center space-x-2 mb-4">
-          <ApperIcon name="Search" size={20} className="text-blue-600" />
-          <h4 className="font-medium text-gray-900">Unsplash Image Search</h4>
-          <Badge variant="info" className="text-xs">1M+ Images</Badge>
-        </div>
-
-        <form onSubmit={handleSearchSubmit} className="space-y-4">
-          <div className="flex space-x-2">
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search high-quality product images..."
-              icon="Search"
-              className="flex-1"
-            />
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={imageData.isProcessing || !searchQuery.trim()}
-              loading={imageData.isProcessing}
-            >
-              Search
-            </Button>
-          </div>
-
-{/* Advanced Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Category Filter</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="input-field text-sm"
-              >
-                <option value="all">All Categories</option>
-                {foodCategories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Image Orientation</label>
-              <select
-                value={orientation}
-                onChange={(e) => setOrientation(e.target.value)}
-                className="input-field text-sm"
-              >
-                <option value="square">Square (1:1) - Recommended</option>
-                <option value="landscape">Landscape (4:3)</option>
-                <option value="portrait">Portrait (3:4)</option>
-                <option value="any">Any Orientation</option>
-              </select>
-            </div>
-          </div>
-        </form>
-
-        {/* Enhanced Category Quick Filters */}
-        <div className="mt-6 space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="block text-sm font-medium text-gray-700">Browse by Category</label>
-            <Badge variant="info" className="text-xs">Zero Redirects</Badge>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {foodCategories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleCategorySearch(category)}
-                className={`p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
-                  selectedCategory === category.id 
-                    ? 'border-blue-500 bg-blue-50' 
-                    : 'border-gray-200 hover:border-blue-300 bg-white hover:bg-blue-50'
-                }`}
-              >
-                <div className="flex flex-col items-center space-y-2">
-                  <div className={`p-2 rounded-full ${category.color}`}>
-                    <ApperIcon name={category.icon} size={20} />
-                  </div>
-                  <span className="text-xs font-medium text-gray-700 text-center">
-                    {category.name}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Enhanced Trending Searches */}
-        <div className="mt-6 space-y-3">
-          <div className="flex items-center space-x-2">
-            <label className="block text-sm font-medium text-gray-700">Trending Searches</label>
-            <ApperIcon name="TrendingUp" size={16} className="text-blue-600" />
-          </div>
-<div className="flex flex-wrap gap-2">
-            {trendingSearches.map((term, index) => (
-              <button
-                key={term}
-                onClick={() => {
-                  setSearchQuery(term);
-                  onImageSearch(term, { category: selectedCategory, orientation });
-                }}
-                className="group px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-sm hover:from-blue-200 hover:to-indigo-200 transition-all duration-200 hover:scale-105 border border-blue-200 hover:border-blue-300"
-              >
-                <div className="flex items-center space-x-2">
-                  <span>{term}</span>
-                  {index < 4 && <ApperIcon name="Flame" size={12} className="text-orange-500 group-hover:animate-pulse" />}
-                </div>
-              </button>
-            ))}
-          </div>
-          
-          {/* Search Stats */}
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center space-x-1">
-              <ApperIcon name="Database" size={12} />
-              <span>1M+ High-Quality Images</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <ApperIcon name="Shield" size={12} />
-              <span>Commercial License Included</span>
-            </div>
-          </div>
-        </div>
-      </div>
-{/* Enhanced Search Results Display */}
-      {imageData.searchResults.length > 0 && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
-            <div className="flex items-center space-x-3">
-              <h4 className="font-medium text-gray-900">
-                Search Results ({imageData.searchResults.length})
-              </h4>
-              <Badge variant="success" className="text-xs">Live Results</Badge>
-            </div>
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
-              <div className="flex items-center space-x-1">
-                <ApperIcon name="Award" size={14} />
-                <span>High-Quality</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <ApperIcon name="Shield" size={14} />
-                <span>Commercial Use</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <ApperIcon name="Zap" size={14} />
-                <span>Zero Redirects</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {imageData.searchResults.map((image, index) => (
-              <div
-                key={index}
-                className="relative group cursor-pointer rounded-xl overflow-hidden aspect-square bg-gray-100 hover:shadow-xl transition-all duration-300 hover:scale-102 border-2 border-transparent hover:border-blue-200"
-              >
-                <img
-                  src={image.thumbnail}
-                  alt={image.description || 'Search result'}
-                  className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                  onClick={() => onImageSelect(image.url, image.attribution)}
-/>
-                
-                {/* Enhanced Hover Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-between p-3">
-                  {/* Top Icons */}
-                  <div className="flex justify-between items-start">
-                    <div className="bg-white/90 backdrop-blur-sm rounded-full p-1">
-                      <ApperIcon name="Eye" size={16} className="text-gray-700" />
-                    </div>
-                    <div className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                      Unsplash
-                    </div>
-                  </div>
-                  
-                  {/* Center Download Button */}
-                  <div className="flex items-center justify-center">
-                    <div className="bg-white/95 backdrop-blur-sm rounded-full p-3 transform scale-0 group-hover:scale-100 transition-transform duration-300">
-                      <ApperIcon name="Download" size={20} className="text-blue-600" />
-                    </div>
-                  </div>
-                  
-                  {/* Bottom Attribution */}
-                  <div className="space-y-1">
-                    {image.attribution && (
-                      <div className="text-white text-xs font-medium">
-                        📸 {image.attribution.photographer}
-                      </div>
-                    )}
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="success" className="text-xs">Free</Badge>
-                      <Badge variant="info" className="text-xs">Commercial OK</Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Quick Info Badge */}
-                <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-medium text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {image.quality || 'HD'}
-                </div>
-              </div>
-            ))}
-          </div>
-{/* Enhanced Load More Section */}
-          <div className="flex flex-col items-center space-y-4">
-            <Button
-              variant="secondary"
-              icon="Plus"
-              onClick={() => onImageSearch(searchQuery, { 
-                category: selectedCategory, 
-                orientation,
-                loadMore: true 
-              })}
-              disabled={imageData.isProcessing}
-              loading={imageData.isProcessing}
-              className="min-w-48"
-            >
-              {imageData.isProcessing ? 'Loading More...' : 'Load More Images'}
-            </Button>
-            
-            {/* Load More Info */}
-            <div className="text-center text-sm text-gray-500 space-y-1">
-              <div className="flex items-center justify-center space-x-2">
-                <ApperIcon name="Infinity" size={14} />
-                <span>Unlimited high-quality results</span>
-              </div>
-              <div className="text-xs">
-                All images are optimized for your product catalog
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {searchQuery && imageData.searchResults.length === 0 && !imageData.isProcessing && (
-        <div className="text-center py-12">
-          <ApperIcon name="Search" size={48} className="text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No images found</h3>
-          <p className="text-gray-600 mb-4">No images found for "{searchQuery}"</p>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500">Try:</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {['organic food', 'fresh produce', 'healthy ingredients'].map((suggestion) => (
-                <button
-                  key={suggestion}
-                  onClick={() => {
-                    setSearchQuery(suggestion);
-                    onImageSearch(suggestion, { category: selectedCategory, orientation });
-                  }}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Copyright Notice */}
-{/* Enhanced Copyright and License Notice */}
-      <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-lg border border-gray-200">
-        <div className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <ApperIcon name="Shield" size={16} className="text-blue-600" />
-            <span className="font-medium text-gray-900">License & Usage Information</span>
-            <Badge variant="success" className="text-xs">Verified</Badge>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <ApperIcon name="CheckCircle" size={14} className="text-green-600" />
-                <span className="text-gray-700">Free for commercial use</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <ApperIcon name="CheckCircle" size={14} className="text-green-600" />
-                <span className="text-gray-700">No attribution required</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <ApperIcon name="CheckCircle" size={14} className="text-green-600" />
-                <span className="text-gray-700">High-resolution downloads</span>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <ApperIcon name="Users" size={14} className="text-blue-600" />
-                <span className="text-gray-700">Support photographers</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <ApperIcon name="Globe" size={14} className="text-blue-600" />
-                <span className="text-gray-700">Powered by Unsplash API</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <ApperIcon name="Zap" size={14} className="text-blue-600" />
-                <span className="text-gray-700">Zero-redirect browsing</span>
-              </div>
-            </div>
-          </div>
-          
-<div className="text-xs text-gray-600 pt-2 border-t border-gray-200">
-            <p>All images are sourced from Unsplash and comply with their license terms. While attribution is not required, it's appreciated by photographers and helps support the creative community.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 // Enhanced Variation Matrix View Component
 const VariationMatrixView = ({ variations, basePrice, productName, onMatrixUpdate }) => {
   const [matrixData, setMatrixData] = useState({});
@@ -4862,12 +4260,10 @@ const ProductFormModal = ({
 
           {/* Image Upload System */}
           <ImageUploadSystem
-            imageData={imageData}
+imageData={imageData}
             setImageData={setImageData}
             onImageUpload={handleImageUpload}
-            onImageSearch={handleImageSearch}
             onImageSelect={handleImageSelect}
-            onAIImageGenerate={handleAIImageGenerate}
             formData={formData}
           />
 
