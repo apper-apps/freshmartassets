@@ -4115,9 +4115,80 @@ const AdminProductsTable = ({
           </div>
         )}
       </div>
-    </div>
+</div>
   );
 };
+
+// Image search handler - moved outside component
+const handleImageSearchExternal = async (searchQuery, { setImageData, formData, productService, toast }) => {
+    if (!searchQuery?.trim()) {
+      toast.error('Please enter a search term');
+      return;
+    }
+
+    try {
+      setImageData(prev => ({ ...prev, isSearching: true, searchResults: [] }));
+      
+      const results = await productService.searchImages(searchQuery.trim(), {
+        category: formData.category,
+        limit: 12,
+        quality: 'high'
+      });
+
+      if (results?.length > 0) {
+        setImageData(prev => ({ 
+          ...prev, 
+          searchResults: results,
+          isSearching: false 
+        }));
+        toast.success(`Found ${results.length} images`);
+      } else {
+        setImageData(prev => ({ ...prev, isSearching: false, searchResults: [] }));
+        toast.info('No images found. Try different keywords.');
+      }
+    } catch (error) {
+      console.error('Image search failed:', error);
+      setImageData(prev => ({ ...prev, isSearching: false, searchResults: [] }));
+      toast.error('Image search failed. Please try again.');
+    }
+};
+
+// AI image generation handler - moved outside component  
+const handleAIImageGenerateExternal = async (prompt, { setImageData, formData, productService, toast }) => {
+  if (!prompt?.trim()) {
+      toast.error('Please enter a description for AI generation');
+      return;
+    }
+
+    try {
+      setImageData(prev => ({ ...prev, isGenerating: true }));
+      
+      const enhancedPrompt = `High-quality product photo: ${prompt.trim()}${formData.category ? `, ${formData.category} category` : ''}, professional lighting, white background, commercial photography style`;
+      
+      const generatedImage = await productService.generateAIImage(enhancedPrompt, {
+        style: 'commercial',
+        category: formData.category,
+        quality: 'high',
+        aspectRatio: '1:1'
+      });
+
+      if (generatedImage?.url) {
+        setImageData(prev => ({ 
+          ...prev, 
+          aiGenerated: generatedImage,
+          isGenerating: false 
+        }));
+        toast.success('AI image generated successfully!');
+      } else {
+        setImageData(prev => ({ ...prev, isGenerating: false }));
+        toast.error('Failed to generate image. Please try again.');
+      }
+    } catch (error) {
+      console.error('AI image generation failed:', error);
+      setImageData(prev => ({ ...prev, isGenerating: false }));
+      toast.error('AI generation failed. Please try a different description.');
+    }
+  };
 
 // Product Form Modal Component (extracted for reuse)
 const ProductFormModal = ({
@@ -4286,8 +4357,8 @@ imageData={imageData}
               {editingProduct ? "Update Product" : "Add Product"}
             </Button>
           </div>
-        </form>
-</div>
+</form>
+      </div>
     </div>
   );
 };
