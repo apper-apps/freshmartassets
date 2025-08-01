@@ -2436,6 +2436,8 @@ const ImageUploadSystem = ({
   setImageData, 
   onImageUpload, 
   onImageSelect,
+  onImageSearch,
+  onAIImageGenerate,
   formData
 }) => {
 const [dragActive, setDragActive] = useState(false);
