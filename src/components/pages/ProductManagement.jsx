@@ -2547,6 +2547,7 @@ const handleImageSelect = (imageUrl) => {
       {/* Upload Tab */}
 {/* Upload Tab */}
       {(imageData.activeTab || 'upload') === 'upload' && (
+        <div className="space-y-4">
           {/* Drag & Drop Zone */}
           <div
             onDragOver={handleDragOver}
@@ -2577,7 +2578,7 @@ const handleImageSelect = (imageUrl) => {
               </div>
               
               <div>
-<p className="text-lg font-medium text-gray-900">
+                <p className="text-lg font-medium text-gray-900">
                   {dragActive ? 'Drop image here' : 'Upload product image (1:1 ratio recommended)'}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
@@ -2598,7 +2599,7 @@ const handleImageSelect = (imageUrl) => {
 
           {/* Image Preview & Cropping */}
           {imageData.selectedImage && (
-<div className="space-y-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-gray-900">Image Preview</h4>
                 <div className="flex space-x-2">
@@ -2629,7 +2630,7 @@ const handleImageSelect = (imageUrl) => {
                   src={imageData.selectedImage}
                   alt="Product preview"
                   className="w-full max-w-md mx-auto rounded-lg shadow-md"
-style={{ maxHeight: '300px', objectFit: 'cover', aspectRatio: '1/1' }}
+                  style={{ maxHeight: '300px', objectFit: 'cover', aspectRatio: '1/1' }}
                 />
                 
                 {/* 1:1 Aspect Ratio Overlay */}
