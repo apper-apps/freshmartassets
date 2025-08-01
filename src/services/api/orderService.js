@@ -151,10 +151,13 @@ if (orderData.paymentMethod === 'wallet') {
         const walletTransaction = await paymentService.processWalletPayment(orderData.total, newOrder.id);
         newOrder.paymentResult = walletTransaction;
         newOrder.paymentStatus = 'completed';
-      } catch (walletError) {
-        // Enhanced wallet error handling
-        const error = new Error('Wallet payment failed: ' + walletError.message);
+} catch (walletError) {
+        // Enhanced wallet error handling with preserved context
+        const error = new Error(walletError.message); // Remove redundant "Wallet payment failed:" prefix
         error.code = walletError.code || 'WALLET_PAYMENT_FAILED';
+        error.walletType = 'wallet';
+        error.retryable = walletError.retryable !== false;
+        error.userGuidance = walletError.userGuidance || walletError.message;
         error.originalError = walletError;
         throw error;
       }

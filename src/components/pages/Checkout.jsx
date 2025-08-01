@@ -451,7 +451,7 @@ const order = await orderService.create(orderData);
       }
       
 // Enhanced error handling with specific messaging and recovery
-      let errorMessage = 'Order failed: ' + error.message;
+      let errorMessage = error.message; // Remove redundant "Order failed:" prefix
       let showRetry = false;
       let retryDelay = 2000;
       let errorType = 'general';
@@ -466,7 +466,7 @@ const order = await orderService.create(orderData);
         if (error.walletType === 'jazzcash' || error.walletType === 'easypaisa') {
           retryDelay = 4000; // Longer delay for mobile wallet processing
           
-          // Enhanced error messaging for mobile wallet failures
+// Enhanced error messaging for mobile wallet failures
           if (error.reason?.includes('Network connectivity')) {
             errorMessage = `${error.walletType === 'jazzcash' ? 'JazzCash' : 'EasyPaisa'} payment failed due to network issues. Please check your internet connection and wallet balance, then try again.`;
             showRetry = true;
@@ -477,6 +477,10 @@ const order = await orderService.create(orderData);
           } else if (error.reason?.includes('Transaction limit exceeded')) {
             errorMessage = `Transaction limit exceeded for your ${error.walletType === 'jazzcash' ? 'JazzCash' : 'EasyPaisa'} wallet. Please try with a different payment method or contact your wallet provider.`;
             showRetry = false; // Don't retry limit exceeded errors
+          } else if (error.reason?.includes('Authentication failed') || error.message?.includes('Authentication failed')) {
+            errorMessage = `${error.walletType === 'jazzcash' ? 'JazzCash' : 'EasyPaisa'} authentication failed. Please verify your wallet credentials, ensure sufficient balance, and check that your wallet is active, then try again.`;
+            showRetry = true;
+            retryDelay = 3000; // Longer delay for authentication issues
           }
         }
       } else if (error.message?.includes('payment')) {
