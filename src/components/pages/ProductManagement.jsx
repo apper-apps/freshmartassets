@@ -2771,11 +2771,10 @@ onClick={() => onImageSearch(imageData.searchQuery || formData.name)}
           
           {imageData.searchResults && imageData.searchResults.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {imageData.searchResults.map((imageUrl, index) => (
-                <div
+<div
                   key={index}
                   className="relative cursor-pointer group"
-                  onClick={() => handleImageSelect(imageUrl)}
+                  onClick={() => onImageSelect(imageUrl)}
                 >
                   <img
                     src={imageUrl}
